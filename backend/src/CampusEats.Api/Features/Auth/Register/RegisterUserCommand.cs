@@ -4,4 +4,9 @@ using MediatR;
 
 namespace CampusEats.Api.Features.Auth.Register;
 
-public record RegisterUserCommand(string Name, string Email, string Password, UserRole Role) : IRequest<AuthResultDto>;
+public record RegisterUserCommand(
+    string Name,
+    string Email,
+    string Password,
+    UserRole Role
+) : IRequest<AuthResultDto>;

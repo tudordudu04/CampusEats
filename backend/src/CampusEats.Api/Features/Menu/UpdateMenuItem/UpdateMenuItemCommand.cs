@@ -1,3 +1,4 @@
+using CampusEats.Api.Enums;
 using MediatR;
 
 namespace CampusEats.Api.Features.Menu.UpdateMenuItem;
@@ -7,7 +8,7 @@ public record UpdateMenuItemCommand(
     string Name,
     decimal Price,
     string? Description,
-    string? Category,
+    MenuCategory Category,
     string? ImageUrl,
     string[] Allergens
 ) : IRequest<bool>;

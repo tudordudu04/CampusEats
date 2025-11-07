@@ -1,13 +1,26 @@
+using CampusEats.Api.Data;
 using FluentValidation;
+using Microsoft.EntityFrameworkCore;
 
 namespace CampusEats.Api.Features.Auth.Register;
 
 public class RegisterUserValidator : AbstractValidator<RegisterUserCommand>
 {
-    public RegisterUserValidator()
+    public RegisterUserValidator(AppDbContext db)
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(100);
-        RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(255);
+        RuleFor(x => x.Email)
+            .NotEmpty()
+            .EmailAddress()
+            .MustAsync(async (email, ct) =>
+            {
+                if (string.IsNullOrWhiteSpace(email)) return true;
+                var normalized = email.ToLowerInvariant();
+                return !await db.Users.AsNoTracking()
+                    .AnyAsync(u => u.Email.ToLower() == normalized, ct);
+            })
+            .WithMessage("Email already registered.");
+        
         RuleFor(x => x.Password)
             .NotEmpty()
             .MinimumLength(8)

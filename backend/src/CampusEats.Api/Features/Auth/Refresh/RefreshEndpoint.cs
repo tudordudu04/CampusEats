@@ -4,7 +4,7 @@ namespace CampusEats.Api.Features.Auth.Refresh;
 
 public static class RefreshEndpoint
 {
-    public static void Map(WebApplication app)
+    public static void Map(IEndpointRouteBuilder app)
     {
         app.MapPost("/auth/refresh", async (IMediator mediator, CancellationToken ct) =>
             {

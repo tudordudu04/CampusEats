@@ -16,16 +16,13 @@ public class RegisterUserHandler(
 {
     public async Task<AuthResultDto> Handle(RegisterUserCommand request, CancellationToken ct)
     {
-        //validation
-        var exists = await db.Users.AsNoTracking().AnyAsync(u => u.Email == request.Email, ct);
-        if (exists) throw new InvalidOperationException("Email already registered.");
-
-        var user = new Domain.User
+        var user = new User
         {
             Name = request.Name,
             Email = request.Email,
             Role = request.Role
         };
+        
         user.PasswordHash = passwords.Hash(user, request.Password);
 
         db.Users.Add(user);

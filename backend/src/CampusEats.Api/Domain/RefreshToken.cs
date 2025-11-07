@@ -1,5 +1,3 @@
-using System;
-
 namespace CampusEats.Api.Domain;
 
 public class RefreshToken

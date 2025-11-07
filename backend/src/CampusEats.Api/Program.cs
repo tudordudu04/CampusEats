@@ -72,7 +72,6 @@ builder.Services.AddSwaggerGen(c =>
                 Email = "support@example.com",
             }
         });
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "CampusEats API", Version = "v1" });
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "JWT Authorization header using the Bearer scheme. Example: Bearer {token}",
@@ -100,19 +99,20 @@ builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBeh
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
 builder.Services.AddHttpContextAccessor();
 const string corsPolicy = "frontend";
-// builder.Services.AddCors(options =>
-// {
-//     options.AddPolicy(corsPolicy, policy =>
-//     {
-//         policy.WithOrigins("http://localhost:5173")
-//             .AllowAnyHeader()
-//             .AllowAnyMethod();
-//     });
-// });
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(corsPolicy, policy =>
+    {
+        policy.WithOrigins("http://localhost:5173")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
 
 var app = builder.Build();
 
-// app.UseCors(corsPolicy);
+app.UseCors(corsPolicy);
 app.UseMiddleware<ValidationExceptionMiddleware>();
 app.UseHttpsRedirection();
 

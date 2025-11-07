@@ -3,4 +3,7 @@ using MediatR;
 
 namespace CampusEats.Api.Features.Auth.Login;
 
-public record LoginUserCommand(string Email, string Password) : IRequest<AuthResultDto>;
+public record LoginUserCommand(
+    string Email,
+    string Password
+) : IRequest<AuthResultDto>;

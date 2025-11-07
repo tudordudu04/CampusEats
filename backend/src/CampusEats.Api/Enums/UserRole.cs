@@ -2,7 +2,7 @@ namespace CampusEats.Api.Enums;
 
 public enum UserRole
 {
-    Student = 0,
-    Worker = 1,
-    Manager = 2
+    STUDENT = 0,
+    WORKER = 1,
+    MANAGER = 2
 }

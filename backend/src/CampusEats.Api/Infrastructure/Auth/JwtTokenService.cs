@@ -2,13 +2,14 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using CampusEats.Api.Domain;
 using Microsoft.IdentityModel.Tokens;
 
 namespace CampusEats.Api.Infrastructure.Auth;
 
 public interface IJwtTokenService
 {
-    string GenerateAccessToken(Domain.User user);
+    string GenerateAccessToken(User user);
     (string token, string hash, DateTime expiresAtUtc) GenerateRefreshToken(int days);
     string Hash(string value);
 }
@@ -17,7 +18,7 @@ public class JwtTokenService(JwtOptions options) : IJwtTokenService
 {
     private readonly SymmetricSecurityKey _key = new(Encoding.UTF8.GetBytes(options.SigningKey));
 
-    public string GenerateAccessToken(Domain.User user)
+    public string GenerateAccessToken(User user)
     {
         var creds = new SigningCredentials(_key, SecurityAlgorithms.HmacSha256);
         var now = DateTime.UtcNow;

@@ -17,6 +17,7 @@ public class LoginUserHandler(
     {
         var user = await db.Users.FirstOrDefaultAsync(u => u.Email == request.Email, ct);
         if (user is null || !passwords.Verify(user, user.PasswordHash, request.Password))
+            //Ar trebui sa returnez un Task<IResult>
             throw new UnauthorizedAccessException("Invalid credentials.");
 
         // Rotate refresh token

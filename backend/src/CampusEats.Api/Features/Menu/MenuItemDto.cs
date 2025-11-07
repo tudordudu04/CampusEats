@@ -1,3 +1,5 @@
+using CampusEats.Api.Enums;
+
 namespace CampusEats.Api.Features.Menu;
 
 public record MenuItemDto(
@@ -5,7 +7,7 @@ public record MenuItemDto(
     string Name,
     decimal Price,
     string? Description,
-    string? Category,
+    MenuCategory Category,
     string? ImageUrl,
     string[] Allergens
 );

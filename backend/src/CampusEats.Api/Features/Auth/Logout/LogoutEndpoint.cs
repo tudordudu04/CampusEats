@@ -4,7 +4,7 @@ namespace CampusEats.Api.Features.Auth.Logout;
 
 public static class LogoutEndpoint
 {
-    public static void Map(WebApplication app)
+    public static void Map(IEndpointRouteBuilder app)
     {
         app.MapPost("/auth/logout", async (IMediator mediator, CancellationToken ct) =>
             {

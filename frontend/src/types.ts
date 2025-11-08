@@ -2,11 +2,19 @@ export type MenuItem = {
     id: string
     name: string
     price: number
-    description?: string | null
-    category?: string | null
-    imageUrl?: string | null
+    description: string | null
+    category: number
+    imageUrl: string | null
     allergens: string[]
 }
 
-export type CreateMenuItem = Omit<MenuItem, 'id'>
-export type UpdateMenuItem = { id: string } & CreateMenuItem
+export type CreateMenuItem = {
+    name: string
+    price: number
+    description: string | null
+    category: number
+    imageUrl: string | null
+    allergens: string[]
+}
+
+export type UpdateMenuItem = Partial<CreateMenuItem>

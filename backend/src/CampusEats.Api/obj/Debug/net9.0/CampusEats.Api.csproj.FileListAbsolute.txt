@@ -141,3 +141,7 @@
 /home/dudu/RiderProjects/CampusEats/backend/src/CampusEats.Api/obj/Debug/net9.0/CampusEats.Api.pdb
 /home/dudu/RiderProjects/CampusEats/backend/src/CampusEats.Api/obj/Debug/net9.0/CampusEats.Api.genruntimeconfig.cache
 /home/dudu/RiderProjects/CampusEats/backend/src/CampusEats.Api/obj/Debug/net9.0/ref/CampusEats.Api.dll
+/home/dudu/RiderProjects/CampusEats/backend/src/CampusEats.Api/bin/Debug/net9.0/Microsoft.AspNetCore.Authentication.JwtBearer.dll
+/home/dudu/RiderProjects/CampusEats/backend/src/CampusEats.Api/bin/Debug/net9.0/Microsoft.IdentityModel.Protocols.dll
+/home/dudu/RiderProjects/CampusEats/backend/src/CampusEats.Api/bin/Debug/net9.0/Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
+/home/dudu/RiderProjects/CampusEats/backend/src/CampusEats.Api/bin/Debug/net9.0/System.IdentityModel.Tokens.Jwt.dll

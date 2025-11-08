@@ -17,7 +17,7 @@ public class UpdateMenuItemHandler(AppDbContext db) : IRequestHandler<UpdateMenu
             request.Name.Trim(),
             request.Price,
             request.Description?.Trim(),
-            request.Category?.Trim(),
+            request.Category,
             request.ImageUrl?.Trim(),
             request.Allergens ?? []
         );

@@ -1,3 +1,7 @@
 bin
 .idea
 appsettings.Development.json
+campuseats.db
+**/bin/
+**/obj/
+Migrations

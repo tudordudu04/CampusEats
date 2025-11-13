@@ -5,6 +5,11 @@ using CampusEats.Api.Features.Auth.Login;
 using CampusEats.Api.Features.Auth.Logout;
 using CampusEats.Api.Features.Auth.Refresh;
 using CampusEats.Api.Features.Auth.Register;
+using CampusEats.Api.Features.Kitchen.CreateKitchenTask;
+using CampusEats.Api.Features.Kitchen.DeleteByIdKitchenTask;
+using CampusEats.Api.Features.Kitchen.GetAllKitchenTasks;
+using CampusEats.Api.Features.Kitchen.GetKitchenTasksByStatus;
+using CampusEats.Api.Features.Kitchen.UpdateKitchenTask;
 using CampusEats.Api.Features.Menu.CreateMenuItem;
 using CampusEats.Api.Features.Menu.DeleteMenuItem;
 using CampusEats.Api.Features.Menu.GetAllMenuItems;
@@ -137,7 +142,6 @@ if (app.Environment.IsDevelopment())
             c.DisplayRequestDuration();
         }
     );
-    
 }
 
 app.MapGet("/", () => Results.Ok(new { name = "CampusEats API", status = "ok" }));
@@ -153,4 +157,11 @@ LoginUserEndpoint.Map(app);
 RefreshEndpoint.Map(app);
 LogoutEndpoint.Map(app);
 OrdersEndpoint.MapOrders(app);
+
+CreateKitchenTaskEndpoint.Map(app);
+GetAllKitchenTasksEndpoint.Map(app);
+DeleteKitchenTaskEndpoint.Map(app);
+GetKitchenTasksByStatusEndpoint.Map(app);
+UpdateKitchenTaskEndpoint.Map(app);
+
 app.Run();

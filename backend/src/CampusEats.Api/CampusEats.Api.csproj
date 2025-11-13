@@ -24,7 +24,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Features\Kitchen\" />
       <Folder Include="Features\Loyalty\" />
       <Folder Include="Features\Payments\" />
     </ItemGroup>

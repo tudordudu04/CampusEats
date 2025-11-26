@@ -19,7 +19,7 @@ public static class GetLoyaltyAccountEndpoint
                 var account = await mediator.Send(new GetLoyaltyAccountQuery(userId));
                 return account is not null ? Results.Ok(account) : Results.NotFound();
             })
-            .RequireAuthorization()
+            // .RequireAuthorization()
             .WithTags("Loyalty")
             .WithOpenApi();
     }

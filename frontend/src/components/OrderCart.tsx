@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { MenuItem } from '../types'
-import { OrderApi } from '../services/api'
+import { PaymentApi } from '../services/api' 
 import { ShoppingCart, X, Trash2, Minus, Plus, CreditCard } from 'lucide-react'
 
 type CartItem = { item: MenuItem; quantity: number }
@@ -18,17 +18,15 @@ export default function OrderCart({ cart, onClear, onUpdateQuantity }: Props) {
     const total = cart.reduce((sum, c) => sum + c.item.price * c.quantity, 0)
     const itemCount = cart.reduce((acc, i) => acc + i.quantity, 0)
 
-    // Logica specială care ocolește Stripe (Workaround)
     const handlePlaceOrderDirect = async () => {
         if (cart.length === 0) return
         setLoading(true)
         try {
             const items = cart.map(c => ({ menuItemId: c.item.id, quantity: c.quantity }))
-            // Trimitem comanda direct
-            await OrderApi.create(items, "Plata la livrare (Cash)")
+            const { checkoutUrl } = await PaymentApi.createSession(items, "Plata la livrare (Cash)")
             onClear()
             setIsOpen(false)
-            window.location.href = '/orders'
+            window.location.href = checkoutUrl
         } catch (err: any) {
             alert('Eroare la plasarea comenzii: ' + err.message)
         } finally {

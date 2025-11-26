@@ -19,7 +19,7 @@ public static class GetLoyaltyTransactionsEndpoint
                 var transactions = await mediator.Send(new GetLoyaltyTransactionsQuery(userId));
                 return Results.Ok(transactions);
             })
-            .RequireAuthorization()
+            // .RequireAuthorization()
             .WithTags("Loyalty")
             .WithOpenApi();
     }

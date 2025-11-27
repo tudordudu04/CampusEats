@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using CampusEats.Api.Domain;
+using CampusEats.Api.Enums;
+using Microsoft.AspNetCore.Identity;
 
 namespace CampusEats.Api.Data;
 
@@ -15,6 +17,33 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<LoyaltyAccount> LoyaltyAccounts => Set<LoyaltyAccount>();
     public DbSet<LoyaltyTransaction> LoyaltyTransactions => Set<LoyaltyTransaction>();
 
+    public async Task EnsureSeedManagerAsync(
+        string name,
+        string email,
+        string password,
+        PasswordHasher<User> hasher,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+            return;
+
+        if (await Users.AnyAsync(u => u.Email == email, cancellationToken))
+            return;
+
+        var manager = new User
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            Email = email,
+            Role = UserRole.MANAGER,
+            CreatedAtUtc = DateTime.UtcNow,
+            UpdatedAtUtc = DateTime.UtcNow
+        };
+
+        manager.PasswordHash = hasher.HashPassword(manager, password);
+        await Users.AddAsync(manager, cancellationToken);
+        await SaveChangesAsync(cancellationToken);
+    }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -25,7 +54,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasForeignKey<LoyaltyAccount>(la => la.UserId)
             .OnDelete(DeleteBehavior.Cascade);
     }
-
+    
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         var now = DateTime.UtcNow;

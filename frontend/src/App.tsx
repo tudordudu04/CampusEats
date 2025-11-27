@@ -35,7 +35,7 @@ function NavLink({ to, icon: Icon, children, active }: any) {
 
 function Layout({ children, role, onLogout }: any) {
     const location = useLocation()
-    const { points: loyaltyPoints } = useLoyaltyPoints(!!role)
+    const { points: loyaltyPoints } = useLoyaltyPoints(role === 'STUDENT')
     const points = loyaltyPoints ?? 0
     return (
         <div className="min-h-screen flex flex-col bg-gray-50 font-sans">
@@ -73,16 +73,19 @@ function Layout({ children, role, onLogout }: any) {
                         <div className="flex items-center gap-4">
                             {role ? (
                                 <div className="flex items-center gap-3">
-                                    {/* Link Puncte Loialitate */}
-                                    <Link to="/loyalty" className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 hover:bg-amber-100 rounded-full text-amber-700 text-sm font-semibold shadow-sm transition-colors cursor-pointer" title="Vezi Detalii Puncte">
-                                        <Gift size={14} />
-                                        <span>{points}</span>
-                                    </Link>
+                                    {/* Link Puncte Loialitate - doar pentru STUDENT */}
+                                    {role === 'STUDENT' && (
+                                        <>
+                                            <Link to="/loyalty" className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 hover:bg-amber-100 rounded-full text-amber-700 text-sm font-semibold shadow-sm transition-colors cursor-pointer" title="Vezi Detalii Puncte">
+                                                <Gift size={14} />
+                                                <span>{points}</span>
+                                            </Link>
+                                            <div className="h-6 w-px bg-gray-300 mx-1"></div>
+                                        </>
+                                    )}
 
-                                    <div className="h-6 w-px bg-gray-300 mx-1"></div>
-
-                                    <button 
-                                        onClick={onLogout} 
+                                    <button
+                                        onClick={onLogout}
                                         className="flex items-center gap-2 text-gray-500 hover:text-red-600 transition-colors text-sm font-medium hover:bg-red-50 px-3 py-1.5 rounded-lg"
                                         title="Deconectare"
                                     >

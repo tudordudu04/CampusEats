@@ -138,7 +138,14 @@ app.UseHttpsRedirection();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var hasher = scope.ServiceProvider.GetRequiredService<PasswordHasher<CampusEats.Api.Domain.User>>();
     await db.Database.EnsureCreatedAsync();
+    
+    var managerName = builder.Configuration["SeedManager:Name"];
+    var managerEmail = builder.Configuration["SeedManager:Email"];
+    var managerPassword = builder.Configuration["SeedManager:Password"];
+    
+    await db.EnsureSeedManagerAsync(managerName, managerEmail, managerPassword, hasher);
 }
 
 if (app.Environment.IsDevelopment())

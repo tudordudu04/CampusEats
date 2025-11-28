@@ -1,6 +1,8 @@
-﻿using System.Security.Claims;
+﻿
+using System.Security.Claims;
 using CampusEats.Api.Data;
 using CampusEats.Api.Enums;
+using CampusEats.Api.Domain;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -38,6 +40,35 @@ public class CancelOrderHandler : IRequestHandler<CancelOrderCommand, bool>
 
         order.Status = OrderStatus.Cancelled;
         order.UpdatedAt = DateTime.UtcNow;
+
+        // Reverse any loyalty points that were earned for this order
+        var earnedPoints = await _db.LoyaltyTransactions
+            .Where(t => t.RelatedOrderId == order.Id && t.Type == LoyaltyTransactionType.Earned)
+            .SumAsync(t => (int?)t.PointsChange, ct) ?? 0;
+
+        if (earnedPoints > 0)
+        {
+            var account = await _db.LoyaltyAccounts.FirstOrDefaultAsync(a => a.UserId == order.UserId, ct);
+            if (account != null)
+            {
+                var deduction = Math.Min(account.Points, earnedPoints);
+                account.Points -= deduction;
+                account.UpdatedAtUtc = DateTime.UtcNow;
+
+                var reversal = new LoyaltyTransaction
+                {
+                    LoyaltyAccountId = account.Id,
+                    PointsChange = -deduction,
+                    Type = LoyaltyTransactionType.Adjusted,
+                    Description = $"Reversal for cancelled order {order.Id}",
+                    RelatedOrderId = order.Id,
+                    CreatedAtUtc = DateTime.UtcNow
+                };
+
+                _db.LoyaltyTransactions.Add(reversal);
+                _db.LoyaltyAccounts.Update(account);
+            }
+        }
 
         _db.Orders.Update(order);
         var affected = await _db.SaveChangesAsync(ct);

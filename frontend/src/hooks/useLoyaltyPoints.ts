@@ -1,11 +1,12 @@
-﻿import { useEffect, useState } from 'react'
+﻿// frontend/src/hooks/useLoyaltyPoints.ts
+import { useEffect, useState, useCallback } from 'react'
 import { LoyaltyApi } from '../services/api'
 
 export function useLoyaltyPoints(shouldFetch: boolean = true) {
     const [points, setPoints] = useState<number | null>(null)
     const [loading, setLoading] = useState(shouldFetch)
 
-    const loadPoints = async () => {
+    const loadPoints = useCallback(async () => {
         if (!shouldFetch) {
             setPoints(null)
             setLoading(false)
@@ -22,11 +23,17 @@ export function useLoyaltyPoints(shouldFetch: boolean = true) {
         } finally {
             setLoading(false)
         }
-    }
+    }, [shouldFetch])
 
     useEffect(() => {
         loadPoints()
-    }, [shouldFetch])
+    }, [loadPoints])
+
+    useEffect(() => {
+        const handler = () => { loadPoints() }
+        window.addEventListener('loyalty:refresh', handler as EventListener)
+        return () => window.removeEventListener('loyalty:refresh', handler as EventListener)
+    }, [loadPoints])
 
     return { points, loading, refresh: loadPoints }
 }

@@ -24,6 +24,7 @@ export default function OrdersPage() {
         if (!confirm('Sigur dorești să anulezi comanda?')) return
         try {
             await OrderApi.cancel(id)
+            window.dispatchEvent(new CustomEvent('loyalty:refresh'))
             await loadOrders()
         } catch (err) {
             alert('Nu s-a putut anula comanda.')

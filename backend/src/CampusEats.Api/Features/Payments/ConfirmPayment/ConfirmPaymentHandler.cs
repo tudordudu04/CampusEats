@@ -94,6 +94,17 @@ public class ConfirmPaymentHandler(AppDbContext db, ILoyaltyService loyaltyServi
             });
         }
 
+        var kitchenTasks = new KitchenTask
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            AssignedTo = userId,
+            Status = KitchenTaskStatus.NotStarted,
+            Notes = "",
+            UpdatedAt = DateTime.UtcNow
+        };
+        db.KitchenTasks.Add(kitchenTasks);
+
         db.Orders.Add(order);
 
         payment.OrderId = order.Id;

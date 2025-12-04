@@ -2,7 +2,8 @@ using MediatR;
 
 namespace CampusEats.Api.Features.Payments.CreatePaymentSession;
 
-public record CreatePaymentSessionCommand(List<OrderItemDto> Items) : IRequest<CreatePaymentSessionResult>;
+// Am adăugat string? Notes
+public record CreatePaymentSessionCommand(List<OrderItemDto> Items, string? Notes) : IRequest<CreatePaymentSessionResult>;
 
 public record OrderItemDto(string MenuItemId, int Quantity);
 

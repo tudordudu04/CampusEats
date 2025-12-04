@@ -67,7 +67,9 @@ public class CreatePaymentSessionHandler(
             {
                 { "payment_id", payment.Id.ToString() },
                 { "user_id", userId },
-                { "order_items", System.Text.Json.JsonSerializer.Serialize(request.Items) }
+                { "order_items", System.Text.Json.JsonSerializer.Serialize(request.Items) },
+                // Salvăm și notițele aici
+                { "order_notes", request.Notes ?? "" }
             }
         };
 

@@ -35,9 +35,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export type AuthResult = { accessToken: string; }
-export type RegisterBody = { name: string; email: string; password: string }
+export type RegisterBody = { name: string; email: string; password: string; role: number;}
 export type LoginBody = { email: string; password: string }
-
+export type UserDto = {
+    id: string
+    name: string
+    email: string
+    role: string
+    createdAtUtc: string
+    updatedAtUtc: string
+}
 export const AuthApi = {
     register: async (body: RegisterBody) => {
         const result = await request<AuthResult>('/auth/register', {
@@ -45,6 +52,13 @@ export const AuthApi = {
             body: JSON.stringify(body),
         })
         setAccessToken(result.accessToken)
+        return result
+    },
+    adminRegister: async (body: RegisterBody) => {
+        const result = await request<AuthResult>('/auth/register', {
+            method: 'POST',
+            body: JSON.stringify(body),
+        })
         return result
     },
     login: async (body: LoginBody) => {
@@ -63,6 +77,15 @@ export const AuthApi = {
     logout: async () => {
         await request<void>('/auth/logout', { method: 'POST' })
         setAccessToken(null)
+    },
+    getAllUsers: () => request<UserDto[]>('/auth/users'),
+    deleteUser: async (id: string) => {
+        const body = { userId: id }
+        const result = await request<void>('/auth/delete', {
+            method: 'DELETE',
+            body: JSON.stringify(body),
+        })
+        return result
     },
     getToken: () => accessToken,
 }

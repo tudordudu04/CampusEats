@@ -6,6 +6,7 @@ import { RefreshCcw, Clock, CheckCircle, ChefHat, ArrowRight, Flame } from 'luci
 export default function KitchenDashboard() {
     const [tasks, setTasks] = useState<KitchenTaskDto[]>([])
 
+    //modify so that if it gets 204 no content it won't give an error
     const loadTasks = async () => {
         try {
             const data = await KitchenApi.getAll()

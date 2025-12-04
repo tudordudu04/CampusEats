@@ -1,5 +1,7 @@
+using System.Security.Claims;
 using CampusEats.Api.Data;
 using CampusEats.Api.Domain;
+using CampusEats.Api.Enums;
 using CampusEats.Api.Infrastructure.Auth;
 using CampusEats.Api.Infrastructure.Security;
 using MediatR;
@@ -15,17 +17,31 @@ public class RegisterUserHandler(
 {
     public async Task<IResult> Handle(RegisterUserCommand request, CancellationToken ct)
     {
+        if (request.Role != UserRole.STUDENT)
+        {
+            var ctx = http.HttpContext;
+            if (ctx is null || ctx.User.Identity?.IsAuthenticated != true)
+                return Results.Unauthorized();
+
+            var roleClaim = ctx.User.FindFirst(ClaimTypes.Role)?.Value;
+
+            if (!Enum.TryParse<UserRole>(roleClaim, ignoreCase: true, out var callerRole) ||
+                callerRole != UserRole.MANAGER)
+            {
+                return Results.Forbid();
+            }
+        }
+
         var user = new User
         {
             Name = request.Name,
             Email = request.Email,
             Role = request.Role
         };
-        
         user.PasswordHash = passwords.Hash(user, request.Password);
 
         db.Users.Add(user);
-        
+
         var loyaltyAccount = new LoyaltyAccount
         {
             UserId = user.Id,
@@ -33,29 +49,31 @@ public class RegisterUserHandler(
         };
 
         db.LoyaltyAccounts.Add(loyaltyAccount);
-        
-        var (rt, rtHash, expiresAt) = jwt.GenerateRefreshToken();
-        db.RefreshTokens.Add(new RefreshToken
+
+        if (request.Role == UserRole.STUDENT)
         {
-            UserId = user.Id,
-            TokenHash = rtHash,
-            ExpiresAtUtc = expiresAt
-        });
-
-        await db.SaveChangesAsync(ct);
-
-        // Set HttpOnly+Secure cookie for refresh token
-        var ctx = http.HttpContext!;
-        ctx.Response.Cookies.Append(
-            "refresh_token",
-            rt,
-            new CookieOptions
+            var (rt, rtHash, expiresAt) = jwt.GenerateRefreshToken();
+            db.RefreshTokens.Add(new RefreshToken
             {
-                HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.Strict,
-                Expires = expiresAt
+                UserId = user.Id,
+                TokenHash = rtHash,
+                ExpiresAtUtc = expiresAt
             });
+
+            await db.SaveChangesAsync(ct);
+
+            var ctxResponse = http.HttpContext!;
+            ctxResponse.Response.Cookies.Append(
+                "refresh_token",
+                rt,
+                new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.Strict,
+                    Expires = expiresAt
+                });
+        }
 
         var access = jwt.GenerateAccessToken(user);
         return Results.Ok(new AuthResultDto(access));

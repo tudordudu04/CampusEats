@@ -15,6 +15,7 @@ import MenuForm from './components/MenuForm'
 import OrderCart from './components/OrderCart'
 import PaymentResult from './components/PaymentResult'
 import LoyaltyPage from './pages/LoyaltyPage' // Import pagina nouă
+import AdminPage from './pages/AdminPage'
 import { useLoyaltyPoints } from './hooks/useLoyaltyPoints'
 
 type CartItem = { item: MenuItem; quantity: number }
@@ -65,7 +66,7 @@ function Layout({ children, role, onLogout }: any) {
                             )}
                             
                             {(role === 'MANAGER') && (
-                                <NavLink to="/admin/menu" icon={Settings} active={location.pathname === '/admin/menu'}>Admin</NavLink>
+                                <NavLink to="/admin" icon={Settings} active={location.pathname === '/admin'}>Admin</NavLink>
                             )}
                         </nav>
 
@@ -116,9 +117,11 @@ export default function App() {
     const [token, setToken] = useState<string | null>(() => AuthApi.getToken())
     const [role, setRole] = useState<string | null>(null)
     const [cart, setCart] = useState<CartItem[]>([])
-    const [isRefreshing, setIsRefreshing] = useState(true)
+    const [isRefreshing, setIsRefreshing] = useState<boolean>(() => !!AuthApi.getToken())
 
     useEffect(() => {
+        let interval: number | undefined
+
         const performRefresh = async () => {
             try {
                 await AuthApi.refresh()
@@ -127,23 +130,39 @@ export default function App() {
                 console.error('Token refresh failed:', error)
                 await AuthApi.logout()
                 setToken(null)
+                localStorage.setItem('has_logged_out', '1')
+            } finally {
+                setIsRefreshing(false)
             }
         }
 
-        performRefresh().finally(() => setIsRefreshing(false))
+        const hasLoggedOut = localStorage.getItem('has_logged_out') === '1'
 
-        const interval = setInterval(performRefresh, 14 * 60 * 1000)
+        if (token) {
+            performRefresh()
+            interval = setInterval(performRefresh, 14 * 60 * 1000)
+        } else {
+            if (!hasLoggedOut) {
+                performRefresh()
+            } else {
+                setIsRefreshing(false)
+            }
+        }
 
-        return () => clearInterval(interval)
-    }, [])
+        return () => {
+            if (interval) clearInterval(interval)
+        }
+    }, [token])
 
     useEffect(() => {
         if (token) {
             try {
                 const decoded: any = jwtDecode(token)
-                const userRole = decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] || decoded.role
+                const userRole =
+                    decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] ||
+                    decoded.role
                 setRole(userRole)
-            } catch (e) {
+            } catch {
                 setRole(null)
             }
         } else {
@@ -151,19 +170,20 @@ export default function App() {
         }
     }, [token])
 
+    const handleLogout = async () => {
+        localStorage.setItem('has_logged_out', '1')
+        await AuthApi.logout()
+        setToken(null)
+        setCart([])
+        window.location.href = '/'
+    }
+
     if (isRefreshing) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600"></div>
             </div>
         )
-    }
-
-    const handleLogout = async () => {
-        await AuthApi.logout()
-        setToken(null)
-        setCart([])
-        window.location.href = '/'
     }
 
     const addToCart = (item: MenuItem) => {
@@ -216,7 +236,12 @@ export default function App() {
                     } />
                     
                     <Route path="/login" element={!token ? <LoginPage onLoggedIn={() => setToken(AuthApi.getToken())} /> : <Navigate to="/" />} />
-                    <Route path="/register" element={!token ? <RegisterPage onRegistered={() => setToken(AuthApi.getToken())} /> : <Navigate to="/" />} />
+                    <Route path="/register" element={!token ? 
+                        <RegisterPage
+                        initialRole={0} 
+                        showRoleSelector={false}
+                        onRegistered={() => setToken(AuthApi.getToken())}
+                        /> : <Navigate to="/" />} />
                     
                     {/* Rute Protejate Utilizator */}
                     <Route path="/loyalty" element={token ? <LoyaltyPage /> : <Navigate to="/login" />} />
@@ -224,7 +249,8 @@ export default function App() {
                     
                     {/* Rute Protejate Staff */}
                     <Route path="/kitchen" element={(role === 'WORKER' || role === 'MANAGER') ? <KitchenDashboard /> : <Navigate to="/" />} />
-                    <Route path="/admin/menu" element={(role === 'MANAGER') ? <MenuForm /> : <Navigate to="/" />} />
+                    <Route path="/admin" element={ role === 'MANAGER' ? <AdminPage /> : <Navigate to="/login" />}/>
+                    <Route path="*" element={<Navigate to="/" />} />
                 </Routes>
                 <PaymentResult onSuccess={onPaymentSuccess} />
             </Layout>

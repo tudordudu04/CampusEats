@@ -19,14 +19,15 @@ public sealed class ValidationExceptionMiddleware(RequestDelegate next, ILogger<
             context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
             context.Response.ContentType = "application/json";
 
-            var errors = ex.Errors
-                .GroupBy(e => e.PropertyName)
-                .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
+            var errorMessages = ex.Errors
+                .Select(e => e.ErrorMessage)
+                .Distinct()
+                .ToArray();
 
             await context.Response.WriteAsJsonAsync(new
             {
-                title = "One or more validation errors occurred.",
-                errors
+                message = "Validation failed.",
+                errors = errorMessages
             });
         }
     }

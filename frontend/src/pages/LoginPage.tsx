@@ -18,7 +18,19 @@ export default function LoginPage({ onLoggedIn }: Props) {
             await AuthApi.login({ email, password })
             onLoggedIn()
         } catch (err: any) {
-            setError(err.message || 'Datele de autentificare sunt incorecte')
+            let uiMessage = 'Logarea a eșuat';
+
+            const data = JSON.parse(err.message);
+            if (data) {
+                if (typeof data === 'string') {
+                    uiMessage = data.replace('"', '');
+                } else if (Array.isArray(data.errors) && data.errors.length > 0) {
+                    uiMessage = data.errors.join('\n');
+                } else if (typeof data.message === 'string') {
+                    uiMessage = data.message;
+                }
+            }
+            setError(uiMessage)
         } finally {
             setLoading(false)
         }

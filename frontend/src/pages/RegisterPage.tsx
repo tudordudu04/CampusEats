@@ -19,7 +19,19 @@ export default function RegisterPage({ onRegistered, initialRole = 0, showRoleSe
             await AuthApi.register({ name, email, password, role })
             onRegistered()
         } catch (err: any) {
-            setError(err.message || 'Înregistrarea a eșuat')
+            let uiMessage = 'Înregistrarea a eșuat';
+
+            const data = JSON.parse(err.message);
+            if (data) {
+                if (typeof data === 'string') {
+                    uiMessage = data.replace('"', '');
+                } else if (Array.isArray(data.errors) && data.errors.length > 0) {
+                    uiMessage = data.errors.join('\n');
+                } else if (typeof data.message === 'string') {
+                    uiMessage = data.message;
+                }
+            }
+            setError(uiMessage);
         } finally {
             setLoading(false)
         }

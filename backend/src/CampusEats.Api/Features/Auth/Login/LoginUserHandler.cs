@@ -19,9 +19,7 @@ public class LoginUserHandler(
         if (user is null || !passwords.Verify(user, user.PasswordHash, request.Password))
             return Results.BadRequest("Invalid email or password.");
 
-        // Rotate refresh token
         var (rt, rtHash, expiresAt) = jwt.GenerateRefreshToken();
-        // Invalidate previous tokens for this user
         var tokens = db.RefreshTokens.Where(t => t.UserId == user.Id && t.RevokedAtUtc == null);
         await tokens.ForEachAsync(t => t.RevokedAtUtc = DateTime.UtcNow, ct);
         db.RefreshTokens.Add(new Domain.RefreshToken

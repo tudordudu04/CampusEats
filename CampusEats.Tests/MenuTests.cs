@@ -36,6 +36,7 @@ public class MenuTests
     {
         using var db = TestDbHelper.GetInMemoryDbContext();
         
+        //Aici trebuie cu un Guid deja generat
         var item = new MenuItem(Guid.NewGuid(), "Burger", 20, null, MenuCategory.BURGER, null, []);
         db.MenuItems.Add(item);
         await db.SaveChangesAsync();

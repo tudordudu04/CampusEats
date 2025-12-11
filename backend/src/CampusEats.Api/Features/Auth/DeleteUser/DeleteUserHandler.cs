@@ -33,6 +33,6 @@ public class DeleteUserHandler(
         db.Users.Remove(user);
         await db.SaveChangesAsync(cancellationToken);
 
-        return Results.Ok();
+        return Results.Ok(new { success = true });
     }
 }

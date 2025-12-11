@@ -12,6 +12,7 @@ public class KitchenTests
     {
         using var db = TestDbHelper.GetInMemoryDbContext();
         
+        //Aici trebuie cu un Guid deja generat
         var orderId = Guid.NewGuid();
         var taskId = Guid.NewGuid();
         

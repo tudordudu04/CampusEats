@@ -16,6 +16,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<KitchenTask> KitchenTasks => Set<KitchenTask>();
     public DbSet<LoyaltyAccount> LoyaltyAccounts => Set<LoyaltyAccount>();
     public DbSet<LoyaltyTransaction> LoyaltyTransactions => Set<LoyaltyTransaction>();
+    public DbSet<Ingredient> Ingredients { get; set; }
+    public DbSet<StockTransaction> StockTransactions { get; set; }
 
     public async Task EnsureSeedManagerAsync(
         string name,

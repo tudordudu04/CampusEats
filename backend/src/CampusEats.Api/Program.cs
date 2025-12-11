@@ -133,12 +133,14 @@ builder.Services.AddCors(options =>
 });
 StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
 builder.Services.AddScoped<CampusEats.Api.Infrastructure.Loyalty.ILoyaltyService, CampusEats.Api.Infrastructure.Loyalty.LoyaltyService>();
+builder.WebHost.UseWebRoot("wwwroot");
 
 var app = builder.Build();
 
 app.UseCors(corsPolicy);
 app.UseMiddleware<ValidationExceptionMiddleware>();
 app.UseHttpsRedirection();
+app.UseStaticFiles(); 
 
 using (var scope = app.Services.CreateScope())
 {

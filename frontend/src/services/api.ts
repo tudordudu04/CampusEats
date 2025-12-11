@@ -45,6 +45,30 @@ export type UserDto = {
     createdAtUtc: string
     updatedAtUtc: string
 }
+
+export const FileApi = {
+    uploadMenuImage: async (file: File): Promise<{ url: string }> => {
+        const formData = new FormData()
+        formData.append('file', file)
+
+        const res = await fetch(`${BASE_URL}/api/menu/images`, {
+            method: 'POST',
+            body: formData,
+            credentials: 'include',
+            headers: {
+                ...authHeaders(),
+            },
+        })
+
+        if (!res.ok) {
+            const text = await res.text().catch(() => '')
+            throw new Error(text || `Upload failed with ${res.status}`)
+        }
+
+        const result = await res.json()
+        return result as { url: string }
+    },
+}
 export const AuthApi = {
     register: async (body: RegisterBody) => {
         const result = await request<AuthResult>('/auth/register', {

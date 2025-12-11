@@ -70,7 +70,7 @@ export default function AdminPage() {
                     onClick={() => setSelectedAction('delete')}
                     className={`px-4 py-2 rounded-lg border ${
                         selectedAction === 'delete'
-                            ? 'bg-red-600 text-white border-red-600'
+                            ? 'bg-brand-600 text-white border-brand-600'
                             : 'bg-white text-gray-700 border-gray-300'
                     }`}
                 >

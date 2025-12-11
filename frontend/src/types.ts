@@ -66,6 +66,7 @@ export type KitchenTaskDto = {
     status: string // Backend-ul trimite .ToString()
     notes: string | null
     updatedAt: string
+    orderStatus: string 
 }
 
 export type LoyaltyAccount = {

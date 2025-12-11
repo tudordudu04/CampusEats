@@ -1,5 +1,4 @@
-﻿
-using CampusEats.Api.Data;
+﻿using CampusEats.Api.Data;
 using MediatR;
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
@@ -7,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using CampusEats.Api.Domain;
 using CampusEats.Api.Features.Orders;
 using CampusEats.Api.Enums;
+
 namespace CampusEats.Api.Features.Orders.GetOrders;
 
 public class GetOrdersHandler : IRequestHandler<GetOrdersQuerry, OrderDto?>
@@ -28,7 +28,9 @@ public class GetOrdersHandler : IRequestHandler<GetOrdersQuerry, OrderDto?>
         var idClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (!Guid.TryParse(idClaim, out var userId)) return null;
 
-        var isManager = user.IsInRole(UserRole.MANAGER.ToString())
+        // --- MODIFICARE AICI: Permitem accesul și pentru WORKER ---
+        var canViewAll = user.IsInRole(UserRole.MANAGER.ToString())
+                      || user.IsInRole(UserRole.WORKER.ToString())
                       || user.HasClaim(c => c.Type == ClaimTypes.Role && c.Value == UserRole.MANAGER.ToString());
 
         var order = await _db.Orders
@@ -37,7 +39,9 @@ public class GetOrdersHandler : IRequestHandler<GetOrdersQuerry, OrderDto?>
             .FirstOrDefaultAsync(o => o.Id == request.Id, cancellationToken);
 
         if (order == null) return null;
-        if (!isManager && order.UserId != userId) return null;
+        
+        // Verificăm dacă userul are dreptul să vadă comanda
+        if (!canViewAll && order.UserId != userId) return null;
 
         var menuIds = order.Items.Select(i => i.MenuItemId).Distinct().ToList();
         var menuNames = await _db.MenuItems

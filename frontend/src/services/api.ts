@@ -1,4 +1,4 @@
-import type { CreateMenuItem, MenuItem, UpdateMenuItem, OrderDto, KitchenTaskDto, LoyaltyAccount, LoyaltyTransactionDto } from '../types'
+import type { CreateMenuItem, MenuItem, UpdateMenuItem, OrderDto, KitchenTaskDto, LoyaltyAccount, LoyaltyTransactionDto, InventoryItemDto } from '../types'
 
 const BASE_URL = 'http://localhost:5103'
 
@@ -135,4 +135,19 @@ export const KitchenApi = {
             body: JSON.stringify({ id, status })
         }),
     delete: (id: string) => request(`/api/kitchen/tasks/${id}`, { method: 'DELETE' })
+}
+
+export const InventoryApi = {
+    getAll: () => request<InventoryItemDto[]>('/api/inventory'),
+    getByName: (name: string) => request<InventoryItemDto>(`/api/inventory/${name}`),
+    create: (name: string, unit: string, lowStockThreshold: number) => 
+        request(`/api/inventory/ingredients`, {
+            method: 'POST',
+            body: JSON.stringify({ name, unit, lowStockThreshold })
+        }),
+    adjustStock: (ingredientId: string, quantity: number, type: number, note: string) =>
+        request(`/api/inventory/adjust`, {
+            method: 'PUT',
+            body: JSON.stringify({ ingredientId, quantity, type, note })
+        })
 }

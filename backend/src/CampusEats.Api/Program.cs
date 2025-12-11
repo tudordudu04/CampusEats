@@ -6,10 +6,14 @@ using CampusEats.Api.Features.Auth.Login;
 using CampusEats.Api.Features.Auth.Logout;
 using CampusEats.Api.Features.Auth.Refresh;
 using CampusEats.Api.Features.Auth.Register;
+using CampusEats.Api.Features.Inventory.AdjustStock;
 using CampusEats.Api.Features.Kitchen.CreateKitchenTask;
 using CampusEats.Api.Features.Kitchen.DeleteByIdKitchenTask;
 using CampusEats.Api.Features.Kitchen.GetAllKitchenTasks;
 using CampusEats.Api.Features.Kitchen.GetKitchenTasksByStatus;
+using CampusEats.Api.Features.Inventory.CreateIngredient;
+using CampusEats.Api.Features.Inventory.GetAllIngredientsInStock;
+using CampusEats.Api.Features.Inventory.GetStockByName;
 using CampusEats.Api.Features.Kitchen.UpdateKitchenTask;
 using CampusEats.Api.Features.Menu.CreateMenuItem;
 using CampusEats.Api.Features.Menu.DeleteMenuItem;
@@ -172,6 +176,11 @@ GetAllKitchenTasksEndpoint.Map(app);
 DeleteKitchenTaskEndpoint.Map(app);
 GetKitchenTasksByStatusEndpoint.Map(app);
 UpdateKitchenTaskEndpoint.Map(app);
+
+CreateIngredientEndpoint.Map(app);
+AdjustStockEndpoint.Map(app);
+GetAllIngredientsInStockEndpoint.Map(app);
+GetStockByNameEndpoint.Map(app);
 
 GetLoyaltyAccountEndpoint.Map(app);
 GetLoyaltyTransactionsEndpoint.Map(app);

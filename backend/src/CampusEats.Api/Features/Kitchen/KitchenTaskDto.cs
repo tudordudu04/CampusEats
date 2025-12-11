@@ -8,5 +8,6 @@ public record KitchenTaskDto(
     Guid AssignedTo,
     string Status,
     string? Notes,
-    DateTime UpdatedAt
+    DateTime UpdatedAt,
+    string OrderStatus 
 );

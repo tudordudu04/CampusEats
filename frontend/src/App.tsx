@@ -11,6 +11,7 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import OrdersPage from './pages/OrdersPage'
 import KitchenDashboard from './pages/KitchenDashboard'
+import KitchenOrderDetails from './pages/KitchenOrderDetails'
 import MenuForm from './components/MenuForm'
 import OrderCart from './components/OrderCart'
 import PaymentResult from './components/PaymentResult'
@@ -251,6 +252,7 @@ export default function App() {
                     <Route path="/kitchen" element={(role === 'WORKER' || role === 'MANAGER') ? <KitchenDashboard /> : <Navigate to="/" />} />
                     <Route path="/admin" element={ role === 'MANAGER' ? <AdminPage /> : <Navigate to="/login" />}/>
                     <Route path="*" element={<Navigate to="/" />} />
+                    <Route path="/kitchen/order/:id" element={(role === 'WORKER' || role === 'MANAGER') ? <KitchenOrderDetails /> : <Navigate to="/" />} />
                 </Routes>
                 <PaymentResult onSuccess={onPaymentSuccess} />
             </Layout>

@@ -2,6 +2,7 @@
 using CampusEats.Api.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 namespace CampusEats.Api.Features.Kitchen.GetKitchenTasksByStatus;
 
@@ -13,15 +14,19 @@ public class GetKitchenTasksByStatusHandler(AppDbContext db) : IRequestHandler<G
         if (!statusParsed)
             return Results.BadRequest($"Invalid status: {request.Status}");
 
-        var tasks = await db.KitchenTasks
-            .Where(t => t.Status == status)
-            .Select(t => new KitchenTaskDto(
-                t.Id,
-                t.OrderId,
-                t.AssignedTo,
-                t.Status.ToString(),
-                t.Notes,
-                t.UpdatedAt))
+        var tasks = await (from task in db.KitchenTasks
+                join order in db.Orders on task.OrderId equals order.Id
+                where task.Status == status
+                select new KitchenTaskDto(
+                    task.Id,
+                    task.OrderId,
+                    task.AssignedTo,
+                    task.Status.ToString(),
+                    task.Notes,
+                    task.UpdatedAt,
+                    order.Status.ToString() 
+                ))
+            .AsNoTracking()
             .ToListAsync(ct);
 
         return Results.Ok(tasks);

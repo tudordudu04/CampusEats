@@ -26,6 +26,7 @@
 
     <ItemGroup>
       <Folder Include="Features\Loyalty\" />
+      <Folder Include="wwwroot\menu-images\defaults\" />
     </ItemGroup>
 
 </Project>

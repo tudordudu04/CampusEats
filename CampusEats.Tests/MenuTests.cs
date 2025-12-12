@@ -2,6 +2,7 @@
 using CampusEats.Api.Features.Menu.CreateMenuItem;
 using CampusEats.Api.Features.Menu.DeleteMenuItem;
 using CampusEats.Api.Domain;
+using Microsoft.AspNetCore.Http;
 using Xunit;
 
 
@@ -13,7 +14,7 @@ public class MenuTests
     public async Task CreateMenuItem_Should_Add_Item_To_Database()
     {
         using var db = TestDbHelper.GetInMemoryDbContext();
-        var handler = new CreateMenuItemHandler(db);
+        var handler = new CreateMenuItemHandler(db, new HttpContextAccessor());
         
         var command = new CreateMenuItemCommand(
             Name: "Test Item",

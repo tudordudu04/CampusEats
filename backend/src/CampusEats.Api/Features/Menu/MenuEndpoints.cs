@@ -3,6 +3,7 @@ using CampusEats.Api.Features.Menu.DeleteMenuItem;
 using CampusEats.Api.Features.Menu.GetAllMenuItems;
 using CampusEats.Api.Features.Menu.GetMenuItem;
 using CampusEats.Api.Features.Menu.UpdateMenuItem;
+using CampusEats.Api.Features.Menu.UploadMenuImage;
 using MediatR;
 
 namespace CampusEats.Api.Features.Menu;
@@ -56,5 +57,32 @@ public static class MenuEndpoints
             .WithTags("Menu")
             .WithSummary("Update a menu item")
             .WithDescription("Updates a menu item by id.");
+        
+        app.MapPost("/api/menu/images", async (HttpRequest request, IMediator mediator) =>
+            {
+                if (!request.HasFormContentType)
+                    return Results.BadRequest("Content type must be multipart/form-data.");
+
+                var form = await request.ReadFormAsync();
+                var file = form.Files["file"];
+
+                if (file is null || file.Length == 0)
+                    return Results.BadRequest("No file uploaded.");
+
+                await using var stream = file.OpenReadStream();
+
+                var cmd = new UploadMenuImageCommand(
+                    file.FileName,
+                    file.ContentType,
+                    file.Length,
+                    stream
+                );
+
+                var result = await mediator.Send(cmd);
+                return Results.Ok(result);
+            })
+            .WithTags("Menu")
+            .WithSummary("Upload a menu image")
+            .WithDescription("Uploads a menu image and returns its URL.");
     }
 }

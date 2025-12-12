@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { MenuApi } from '../services/api'
+import { MenuApi, FileApi } from '../services/api'
 import type { CreateMenuItem, MenuItem } from '../types'
 
 const CATEGORY_OPTIONS = [
@@ -19,6 +19,9 @@ export default function MenuPage() {
     const [description, setDescription] = useState('')
     const [category, setCategory] = useState<number>(0) // number state
     const [loading, setLoading] = useState(false)
+    const [imageUrl, setImageUrl] = useState<string | null>(null)
+    const [uploading, setUploading] = useState(false)
+    const [uploadError, setUploadError] = useState<string | null>(null)
 
     useEffect(() => {
         load()
@@ -29,6 +32,21 @@ export default function MenuPage() {
         setItems(data)
     }
 
+    async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0]
+        if (!file) return
+        setUploadError(null)
+        setUploading(true)
+        try {
+            const { url } = await FileApi.uploadMenuImage(file)
+            setImageUrl(url)
+        } catch (err: any) {
+            setUploadError(err.message || 'Failed to upload image')
+        } finally {
+            setUploading(false)
+        }
+    }
+    
     async function onCreate(e: React.FormEvent) {
         e.preventDefault()
         setLoading(true)
@@ -37,8 +55,8 @@ export default function MenuPage() {
                 name,
                 price: typeof price === 'number' ? price : parseFloat(String(price)),
                 description: description || null,
-                category: category, // ensure CreateMenuItem.category is a number
-                imageUrl: null,
+                category: category, 
+                imageUrl: imageUrl,
                 allergens: []
             }
             await MenuApi.create(payload)
@@ -46,6 +64,7 @@ export default function MenuPage() {
             setPrice('')
             setDescription('')
             setCategory(0)
+            setImageUrl(null)
             await load()
         } finally {
             setLoading(false)
@@ -54,7 +73,6 @@ export default function MenuPage() {
 
     return (
         <div className="space-y-8">
-            {/* make this full width inside the admin card */}
             <div className="w-full bg-white rounded-2xl shadow border border-gray-100 p-6">
                 <h3 className="text-xl font-semibold mb-1">Create menu item</h3>
                 <p className="text-sm text-gray-500 mb-6">
@@ -123,7 +141,36 @@ export default function MenuPage() {
                             placeholder="Short description of the dish..."
                         />
                     </div>
-
+                    
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Image
+                        </label>
+                        <div className="flex items-center gap-3">
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleImageChange}
+                                disabled={uploading}
+                                className="text-sm"
+                            />
+                            {uploading && <span className="text-xs text-gray-500">Uploading…</span>}
+                        </div>
+                        {uploadError && (
+                            <div className="mt-1 text-xs text-red-600">{uploadError}</div>
+                        )}
+                        {imageUrl && (
+                            <div className="mt-3">
+                                <p className="text-xs text-gray-500 mb-1">Preview:</p>
+                                <img
+                                    src={imageUrl}
+                                    alt="Preview"
+                                    className="h-24 w-24 object-cover rounded-lg border"
+                                />
+                            </div>
+                        )}
+                    </div>
+                    
                     <div className="pt-2">
                         <button
                             type="submit"

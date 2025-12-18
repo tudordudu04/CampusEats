@@ -112,7 +112,7 @@ export default function OrderCart({ cart, onClear, onUpdateQuantity }: Props) {
             <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity" onClick={() => setIsOpen(false)} />
             
             {/* Cart Panel */}
-            <div className="fixed bottom-6 right-6 w-full max-w-md bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 flex flex-col max-h-[85vh] animate-slide-up transform transition-all">
+            <div className="fixed bottom-0 left-0 right-0 w-full max-w-full sm:bottom-6 sm:right-6 sm:left-auto sm:w-full sm:max-w-md bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 flex flex-col max-h-[85vh] animate-slide-up transform transition-all">
                 {/* Header */}
                 <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/80 backdrop-blur rounded-t-2xl">
                     <div className="flex items-center gap-2">

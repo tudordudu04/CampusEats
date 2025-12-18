@@ -29,7 +29,9 @@ function NavLink({ to, icon: Icon, children, active }: any) {
         <Link 
             to={to} 
             className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all font-medium text-sm
-            ${active ? 'bg-brand-100 text-brand-700 shadow-sm' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}
+            ${active
+                ? 'bg-brand-100 text-brand-700 border-brand-300 shadow'
+                : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-brand-50 hover:text-brand-700 hover:border-brand-200'}`}
         >
             <Icon size={18} />
             {children}
@@ -37,15 +39,98 @@ function NavLink({ to, icon: Icon, children, active }: any) {
     )
 }
 
+function MobileMenu({ isOpen, onClose, role, activePath }: any) {
+    return (
+        <div
+            className={`
+                fixed inset-0 z-50 md:hidden
+                bg-black/40 backdrop-blur-sm
+                transition-opacity duration-200
+                ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
+            `}
+            onClick={onClose}
+        >
+            <div
+                className={`
+                    absolute left-0 top-0 h-full w-64 bg-white shadow-xl p-4
+                    transform transition-transform duration-200
+                    ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+                `}
+                onClick={e => e.stopPropagation()}
+            >
+                <div className="flex items-center justify-between mb-4">
+                    <span className="text-lg font-semibold">Navigation</span>
+                    <button
+                        onClick={onClose}
+                        aria-label="Close menu"
+                        className="text-gray-500 hover:text-gray-800 text-2xl leading-none"
+                    >
+                        ×
+                    </button>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                    <div onClick={onClose}>
+                        <NavLink to="/" icon={ShoppingBag} active={activePath === '/'}>Meniu</NavLink>
+                    </div>
+
+                    {role && (
+                        <div onClick={onClose}>
+                            <NavLink to="/orders" icon={ClipboardList} active={activePath === '/orders'}>Comenzi</NavLink>
+                        </div>
+                    )}
+
+                    {role === 'STUDENT' && (
+                        <div onClick={onClose}>
+                            <NavLink to="/coupons" icon={Ticket} active={activePath === '/coupons'}>Cupoane</NavLink>
+                        </div>
+                    )}
+
+                    {(role === 'WORKER' || role === 'MANAGER') && (
+                        <div onClick={onClose}>
+                            <NavLink to="/kitchen" icon={ChefHat} active={activePath === '/kitchen'}>Bucătărie</NavLink>
+                        </div>
+                    )}
+
+                    {(role === 'WORKER' || role === 'MANAGER') && (
+                        <div onClick={onClose}>
+                            <NavLink to="/inventory" icon={Warehouse} active={activePath === '/inventory'}>Inventar</NavLink>
+                        </div>
+                    )}
+
+                    {role === 'MANAGER' && (
+                        <div onClick={onClose}>
+                            <NavLink to="/admin" icon={Settings} active={activePath === '/admin'}>Admin</NavLink>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    )
+}
+
+
 function Layout({ children, role, onLogout }: any) {
     const location = useLocation()
     const { points: loyaltyPoints } = useLoyaltyPoints(role === 'STUDENT')
     const points = loyaltyPoints ?? 0
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
     return (
         <div className="min-h-screen flex flex-col bg-gray-50 font-sans">
-            <header className="bg-white/90 backdrop-blur-md border-b border-gray-200 sticky top-0 z-40 shadow-sm">
+            <header className={`
+            sticky top-0 z-40 border-b shadow-sm
+            ${isMenuOpen ? 'bg-white' : 'bg-white/90 backdrop-blur-md'}
+          `}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-16 items-center">
+                        <button
+                            className="flex md:hidden items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-gray-700 shadow-sm"
+                            onClick={() => setIsMenuOpen(true)}
+                            aria-label="Open menu"
+                        >
+                            <span className="text-sm font-semibold">Menu</span>
+                        </button>
+                        
                         {/* Logo */}
                         <div className="flex items-center gap-2">
                             <div className="bg-brand-500 p-2 rounded-lg text-white">
@@ -57,7 +142,7 @@ function Layout({ children, role, onLogout }: any) {
                         </div>
                         
                         {/* Navigare Desktop */}
-                        <nav className="hidden md:flex gap-2">
+                        <nav className="hidden md:flex flex-wrap gap-2 md:flex-nowrap">
                             <NavLink to="/" icon={ShoppingBag} active={location.pathname === '/'}>Meniu</NavLink>
                             
                             {role && (
@@ -81,6 +166,46 @@ function Layout({ children, role, onLogout }: any) {
                             )}
                         </nav>
 
+                        {/* Navigare Mobile */}
+                            <div className={`
+                            fixed left-0 top-0 z-50 md:hidden
+                            bg-white rounded-lg p-2 shadow-sm w-64 h-screen
+                            transform transition-transform duration-200 ease-in-out
+                            ${isMenuOpen ? 'translate-x-0 pointer-events-auto' : '-translate-x-full pointer-events-none'}`}>
+                            <div className="flex flex-col gap-2">
+                                <div className="flex items-center justify-between px-3 py-2 text-sm font-semibold border-b border-gray-200">
+                                    Navigation
+                                    <button className="bg-gray-100 hover:bg-brand-50 text-black border font-bold px-2 rounded hover:border-brand-200" onClick={() => setIsMenuOpen(false)}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <nav className="flex flex-col gap-2">
+                                    <NavLink to="/" icon={ShoppingBag} active={location.pathname === '/'}>Meniu</NavLink>
+
+                                    {role && (
+                                        <NavLink to="/orders" icon={ClipboardList} active={location.pathname === '/orders'}>Comenzi</NavLink>
+                                    )}
+
+                                    {role === 'STUDENT' && (
+                                        <NavLink to="/coupons" icon={Ticket} active={location.pathname === '/coupons'}>Cupoane</NavLink>
+                                    )}
+
+                                    {(role === 'WORKER' || role === 'MANAGER') && (
+                                        <NavLink to="/kitchen" icon={ChefHat} active={location.pathname === '/kitchen'}>Bucătărie</NavLink>
+                                    )}
+
+                                    {(role === 'WORKER' || role === 'MANAGER') && (
+                                        <NavLink to="/inventory" icon={Warehouse} active={location.pathname === '/inventory'}>Inventar</NavLink>
+                                    )}
+
+                                    {(role === 'MANAGER') && (
+                                        <NavLink to="/admin" icon={Settings} active={location.pathname === '/admin'}>Admin</NavLink>
+                                    )}
+                                </nav>
+                            </div>
+                        </div>
                         {/* Zona Utilizator / Login */}
                         <div className="flex items-center gap-4">
                             {role ? (
@@ -117,7 +242,7 @@ function Layout({ children, role, onLogout }: any) {
                 </div>
             </header>
             
-            <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
+            <main className="flex-1 w-full mx-auto px-2 sm:px-4 md:px-6 lg:px-8 md:max-w-3xl lg:max-w-5xl xl:max-w-7xl py-8 animate-fade-in ">
                 {children}
             </main>
         </div>

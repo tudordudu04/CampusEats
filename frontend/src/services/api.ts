@@ -1,6 +1,6 @@
 import type { CreateMenuItem, MenuItem, UpdateMenuItem, OrderDto, KitchenTaskDto, LoyaltyAccount, LoyaltyTransactionDto, InventoryItemDto } from '../types'
 
-const BASE_URL = 'http://localhost:5103'
+const BASE_URL = 'http://localhost:5000'
 
 let accessToken: string | null = localStorage.getItem('access_token')
 

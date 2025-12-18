@@ -125,10 +125,16 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy(corsPolicy, policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
+        policy.WithOrigins(
+                "http://localhost:5173",
+                "http://localhost:5000",
+                "https://campuseats.info",
+                "https://www.campuseats.info"
+            )
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
+
     });
 });
 StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];

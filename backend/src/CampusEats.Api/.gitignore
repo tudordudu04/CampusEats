@@ -40,4 +40,5 @@ project.fragment.lock.json
 artifacts/
 
 appsettings.Development.json
+appsettings.Production.json
 Migrations

@@ -41,7 +41,21 @@ public class UpdateUserProfileHandler : IRequestHandler<UpdateUserProfileCommand
             user.AddressDetails = request.AddressDetails;
         user.UpdatedAtUtc = DateTime.UtcNow;
         await  _context.SaveChangesAsync(cancellationToken);
-        return Results.Ok();
+        
+        var response = new {
+            Id = user.Id,
+            Name = user.Name,
+            Email = user.Email,
+            Role = user.Role.ToString(),
+            ProfilePictureUrl = user.ProfilePictureUrl,
+            AddressCity = user.AddressCity,
+            AddressStreet = user.AddressStreet,
+            AddressNumber = user.AddressNumber,
+            AddressDetails = user.AddressDetails,
+            CreatedAtUtc = user.CreatedAtUtc,
+            UpdatedAtUtc = user.UpdatedAtUtc
+        };
+        return Results.Ok(response);
     }
     
 }

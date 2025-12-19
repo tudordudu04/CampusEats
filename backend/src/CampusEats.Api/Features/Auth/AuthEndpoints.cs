@@ -8,6 +8,7 @@ using CampusEats.Api.Features.Auth.UpdateUserProfile;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using CampusEats.Api.Features.Auth.GetUser;
+using CampusEats.Api.Features.Auth.UploadProfilePicture;
 
 namespace CampusEats.Api.Features.Auth;
 
@@ -74,5 +75,20 @@ public static class AuthEndpoints
             
             return result != null ? Results.Ok(result) : Results.NotFound();
         }).RequireAuthorization().WithTags("Auth");
+
+        app.MapPost("/auth/profile-picture", async (
+            IFormFile file,
+            ISender sender, CancellationToken cancellationToken) =>
+        {
+            if (file == null || file.Length == 0)
+            {
+                return Results.BadRequest("Te rog să încarci o poză validă.");
+            }
+
+            using var stream = file.OpenReadStream();
+            var command = new UploadProfilePictureCommand(stream, file.FileName);
+            var result = await sender.Send(command, cancellationToken);
+            return Results.Ok(result);
+        }).RequireAuthorization().DisableAntiforgery();
     }
 }

@@ -127,6 +127,29 @@ export const AuthApi = {
         })
         return result
     },
+    uploadProfilePicture: async (file: File): Promise<{ url: string }> => {
+        const formData = new FormData()
+        formData.append('file', file)
+
+        const url = `${BASE_URL}/auth/profile-picture`
+        console.log("Uploading to URL:", url);
+
+        const res = await fetch(`${BASE_URL }/auth/profile-picture`, {
+            method: 'POST',
+            body: formData,
+            credentials: 'include',
+            headers: {
+                ...authHeaders(),
+            },
+        })
+        if (!res.ok) {
+            const text = await res.text().catch(() => '')
+            throw new Error(text || `Upload failed with ${res.status}`)
+        }
+        const result = await res.json()
+        return { url: result.profilePictureUrl }
+    },
+
     getToken: () => accessToken,
 }
 

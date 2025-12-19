@@ -41,6 +41,7 @@ export default function ProfilePage() {
     }
     const handleSubmit=async(e : React.FormEvent)=>{
         e.preventDefault();
+        console.log("Datele trimise pentru actualizare:", formData);
         try{
             await AuthApi.updateProfile(formData);
             alert("Profil actualizat cu succes!");
@@ -82,8 +83,36 @@ export default function ProfilePage() {
 
            
                 <div className="mb-4">
-                    <label className="block font-bold mb-1">URL Poză Profil:</label>
-                    <input type="text" className="border p-2 rounded w-full" value={formData.profilePictureUrl} onChange={e => setFormData({...formData, profilePictureUrl: e.target.value})} />
+                    <label className="block font-bold mb-1">Poză Profil:</label>
+                    {formData.profilePictureUrl && (
+                        <img 
+                            src={formData.profilePictureUrl}
+                            alt="Poză Profil"
+                            className="w-20 h-20 rounded-full object-cover mb-2 border border-gray-300"
+                        />
+                    )}
+                    <input 
+                        type="file"
+                        accept = "image/*"
+                        className="border p-2 rounded w-full"
+                        onChange = {async e => {
+                            const file = e.target.files?.[0];
+                            if(!file){
+                                return
+                            } 
+                            try{
+                                const result = await AuthApi.uploadProfilePicture(file);
+                                console.log("1. raspuns primit după upload:", result);
+                                setFormData({...formData, profilePictureUrl: result.url});
+                                alert("Poză de profil încărcată cu succes! Apasă Salvează Modificările pentru a o păstra.");
+                            }
+                            catch(err){
+                                console.error(err);
+                                alert("Eroare la încărcarea pozei de profil: ");
+                            }
+
+                        }}
+                         />
                 </div>
                 <div className="mb-4">
                     <label className="block font-bold mb-1">Oraș:</label>
@@ -107,7 +136,7 @@ export default function ProfilePage() {
              
                 <button 
                     type="submit" 
-                    className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded hover:bg-blue-700 transition duration-200 mt-4"
+                    className="w-full bg-brand-600 text-white font-bold py-3 px-4 rounded hover:bg-brand-700 transition duration-200 mt-4"
                 >
                     Salvează Modificările
                 </button>

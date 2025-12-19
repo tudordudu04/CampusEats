@@ -11,8 +11,7 @@ public class UploadMenuImageHandler(IWebHostEnvironment env, IHttpContextAccesso
         var webRoot = env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
         var uploadsRoot = Path.Combine(webRoot, "menu-images");
         Directory.CreateDirectory(uploadsRoot);
-
-            
+        
         var extension = Path.GetExtension(request.FileName);
         if (string.IsNullOrWhiteSpace(extension))
         {

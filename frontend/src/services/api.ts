@@ -1,6 +1,6 @@
 import type { CreateMenuItem, MenuItem, UpdateMenuItem, OrderDto, KitchenTaskDto, LoyaltyAccount, LoyaltyTransactionDto, InventoryItemDto } from '../types'
 
-const BASE_URL = 'http://localhost:5000'
+const BASE_URL = import.meta.env.VITE_API_URL;
 
 let accessToken: string | null = localStorage.getItem('access_token')
 

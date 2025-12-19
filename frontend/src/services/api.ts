@@ -42,6 +42,11 @@ export type UserDto = {
     name: string
     email: string
     role: string
+    profilePictureUrl?: string | null
+    addressCity?: string | null
+    addressStreet?: string | null
+    addressNumber?: string | null
+    addressDetails?: string | null
     createdAtUtc: string
     updatedAtUtc: string
 }
@@ -111,6 +116,40 @@ export const AuthApi = {
         })
         return result
     },
+    getMe : async () => {
+        const result = await request<UserDto>('/auth/me')
+        return result
+    },
+    updateProfile: async (body: Partial<{ name: string | null; profilePictureUrl: string | null; addressCity: string | null; addressStreet: string | null; addressNumber: string | null; addressDetails: string | null;}>) => {
+        const result = await request<UserDto>(`/auth/profile`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        })
+        return result
+    },
+    uploadProfilePicture: async (file: File): Promise<{ url: string }> => {
+        const formData = new FormData()
+        formData.append('file', file)
+
+        const url = `${BASE_URL}/auth/profile-picture`
+        console.log("Uploading to URL:", url);
+
+        const res = await fetch(`${BASE_URL }/auth/profile-picture`, {
+            method: 'POST',
+            body: formData,
+            credentials: 'include',
+            headers: {
+                ...authHeaders(),
+            },
+        })
+        if (!res.ok) {
+            const text = await res.text().catch(() => '')
+            throw new Error(text || `Upload failed with ${res.status}`)
+        }
+        const result = await res.json()
+        return { url: result.profilePictureUrl }
+    },
+
     getToken: () => accessToken,
 }
 

@@ -127,8 +127,8 @@ public class CreatePaymentSessionHandler(
             PaymentMethodTypes = new List<string> { "card" },
             LineItems = lineItems,
             Mode = "payment",
-            SuccessUrl = config["Stripe:SuccessUrl"] ?? "http://localhost:5173/orders?status=success",
-            CancelUrl  = config["Stripe:CancelUrl"]  ?? "http://localhost:5173/orders?status=cancel",
+            SuccessUrl = config["Stripe:SuccessUrl"] ?? "https://campuseats.info",
+            CancelUrl  = config["Stripe:CancelUrl"]  ?? "https://campuseats.info",
             Metadata = metadata
         };
 

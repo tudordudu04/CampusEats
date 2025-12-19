@@ -1,6 +1,4 @@
+using MediatR;
 namespace CampusEats.Api.Features.Auth.GetUser;
 
-public class GetUserQuery
-{
-    
-}
+public record GetUserQuery(Guid UserId) : IRequest<UserDto?>;

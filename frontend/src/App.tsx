@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Link, Navigate, useLocation } from 'react-router-dom'
 import { jwtDecode } from 'jwt-decode'
 import { AuthApi } from './services/api'
-import { LogOut, Pizza, ShoppingBag, ClipboardList, ChefHat, Settings, Gift, Warehouse, Ticket } from 'lucide-react'
+import { LogOut, Pizza, ShoppingBag, ClipboardList, ChefHat, Settings, Gift, Warehouse, Ticket, User } from 'lucide-react'
 import type { MenuItem } from './types'
+
 
 // Pagini
 import MenuPage from './pages/MenuPage'
@@ -20,7 +21,7 @@ import AdminPage from './pages/AdminPage'
 import { useLoyaltyPoints } from './hooks/useLoyaltyPoints'
 import InventoryPage from "./pages/InventoryPage"
 import { CouponsPage } from './pages/CouponsPage';
-
+import ProfilePage from "./pages/ProfilePage"
 type CartItem = { item: MenuItem; quantity: number }
 
 // Componenta ajutătoare pentru link-uri de navigare
@@ -110,7 +111,7 @@ function MobileMenu({ isOpen, onClose, role, activePath }: any) {
 }
 
 
-function Layout({ children, role, onLogout }: any) {
+function Layout({ children, role, onLogout,user }: any) {
     const location = useLocation()
     const { points: loyaltyPoints } = useLoyaltyPoints(role === 'STUDENT')
     const points = loyaltyPoints ?? 0
@@ -216,7 +217,22 @@ function Layout({ children, role, onLogout }: any) {
                                                         </Link>
                                                     </>
                                                 )}
-
+                                                <Link 
+                                                    to="/profile"
+                                                    className="flex items-center gap-2 text-gray-500 hover:text-brand-600 transition-colors text-sm font-medium hover:bg-blue-50 px-3 py-1.5 rounded-lg"
+                                                    title="Profilul Meu"
+                                                    >
+                                                        {user?.profilePictureUrl ? (
+                                                            <img
+                                                                src={user.profilePictureUrl}
+                                                                alt="Profil"
+                                                                className="w-6 h-6 rounded-full object-cover border border-gray-200"
+                                                            />
+                                                        ) : (
+                                                            <User size={18} />
+                                                        )}
+                                                        <span className="hidden sm:inline">Profil</span>
+                                                    </Link>
                                                 <button
                                                     onClick={onLogout}
                                                     className="flex items-center gap-2 text-gray-500 hover:text-red-600 transition-colors text-sm font-medium hover:bg-red-50 px-3 py-1.5 rounded-lg"
@@ -262,6 +278,22 @@ function Layout({ children, role, onLogout }: any) {
                                             <div className="h-6 w-px bg-gray-300 mx-1"></div>
                                         </>
                                     )}
+                                    <Link
+                                        to="/profile"
+                                        className="flex items-center gap-2 text-gray-500 hover:text-brand-600 transition-colors text-sm font-medium hover:bg-brand-50 px-3 py-1.5 rounded-lg"
+                                        title="Profilul Meu"
+                                        >
+                                        {user?.profilePictureUrl ? (
+                                            <img
+                                                src={user.profilePictureUrl}
+                                                alt="Profil"
+                                                className="w-6 h-6 rounded-full object-cover border border-gray-200"
+                                            />
+                                        ) : (
+                                            <User size={18} />
+                                        )}
+                                            <span className="hidden sm:inline">Profil</span>
+                                        </Link>
 
                                     <button
                                         onClick={onLogout}
@@ -294,8 +326,10 @@ function Layout({ children, role, onLogout }: any) {
 export default function App() {
     const [token, setToken] = useState<string | null>(() => AuthApi.getToken())
     const [role, setRole] = useState<string | null>(null)
+    const [user, setUser] = useState<any>(null)
     const [cart, setCart] = useState<CartItem[]>([])
     const [isRefreshing, setIsRefreshing] = useState<boolean>(() => !!AuthApi.getToken())
+    
 
     useEffect(() => {
         let interval: number | undefined
@@ -343,9 +377,13 @@ export default function App() {
             } catch {
                 setRole(null)
             }
+            AuthApi.getMe().then(data => setUser(data)).catch(err => console.error("Eroare la preluarea datelor:", err))
         } else {
             setRole(null)
+            setUser(null)
         }
+        
+
     }, [token])
 
     const handleLogout = async () => {
@@ -394,7 +432,7 @@ export default function App() {
 
     return (
         <BrowserRouter>
-            <Layout role={role} onLogout={handleLogout}>
+            <Layout role={role} user={user} onLogout={handleLogout}>
                 <Routes>
                     <Route path="/" element={
                         <>
@@ -442,7 +480,7 @@ export default function App() {
 
                     <Route path="/inventory" element={(role === 'WORKER' || role === 'MANAGER') ? <InventoryPage /> : <Navigate to="/" />} />
                     <Route path="/admin/menu" element={(role === 'MANAGER') ? <MenuForm /> : <Navigate to="/" />} />
-
+                    <Route path="/profile" element={token ? <ProfilePage /> : <Navigate to="/login" />} />
                 </Routes>
                 <PaymentResult onSuccess={onPaymentSuccess} />
             </Layout>

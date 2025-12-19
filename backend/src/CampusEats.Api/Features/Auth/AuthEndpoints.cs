@@ -4,8 +4,11 @@ using CampusEats.Api.Features.Auth.Refresh;
 using CampusEats.Api.Features.Auth.Register;
 using CampusEats.Api.Features.Auth.DeleteUser;
 using CampusEats.Api.Features.Auth.GetAllUsers;
+using CampusEats.Api.Features.Auth.UpdateUserProfile;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using CampusEats.Api.Features.Auth.GetUser;
+using CampusEats.Api.Features.Auth.UploadProfilePicture;
 
 namespace CampusEats.Api.Features.Auth;
 
@@ -56,5 +59,36 @@ public static class AuthEndpoints
                 return result;
             })
             .WithTags("Auth");
+        app.MapPut("/auth/profile", async (UpdateUserProfileCommand command, ISender sender) =>
+        {
+            var result = await sender.Send(command);
+            return result;
+        }).RequireAuthorization().WithTags("Auth");
+        app.MapGet("/auth/me", async (ISender sender,IHttpContextAccessor httpContextAccessor)=>
+        {
+            var userId = httpContextAccessor.HttpContext?.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            
+            if (userId == null) return Results.Unauthorized();
+            
+            
+            var result = await sender.Send(new GetUserQuery(Guid.Parse(userId)));
+            
+            return result != null ? Results.Ok(result) : Results.NotFound();
+        }).RequireAuthorization().WithTags("Auth");
+
+        app.MapPost("/auth/profile-picture", async (
+            IFormFile file,
+            ISender sender, CancellationToken cancellationToken) =>
+        {
+            if (file == null || file.Length == 0)
+            {
+                return Results.BadRequest("Te rog să încarci o poză validă.");
+            }
+
+            using var stream = file.OpenReadStream();
+            var command = new UploadProfilePictureCommand(stream, file.FileName);
+            var result = await sender.Send(command, cancellationToken);
+            return Results.Ok(result);
+        }).RequireAuthorization().DisableAntiforgery();
     }
 }

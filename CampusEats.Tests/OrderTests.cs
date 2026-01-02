@@ -238,4 +238,141 @@ public class OrderTests
         Assert.Equal(48.25m, order.Total); // (12.50 * 2) + (7.75 * 3) = 25 + 23.25
     }
     
+    [Fact] 
+    public async Task PlaceOrder_Should_Throw_When_Order_Is_Null()
+    {
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        var handler = new PlaceOrderHandler(db, Substitute.For<IHttpContextAccessor>());
+        await Assert.ThrowsAsync<ArgumentNullException>(() => handler.Handle(new PlaceOrderCommand(null!), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task PlaceOrder_Should_Throw_When_Items_Are_Empty()
+    {
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        var handler = new PlaceOrderHandler(db, Substitute.For<IHttpContextAccessor>());
+        var command = new PlaceOrderCommand(new OrderCreateDto { Items = new List<OrderItemCreateDto>() });
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => handler.Handle(command, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task PlaceOrder_Should_Throw_When_Quantity_Is_Zero_Or_Negative()
+    {
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        var handler = new PlaceOrderHandler(db, Substitute.For<IHttpContextAccessor>());
+        var command = new PlaceOrderCommand(new OrderCreateDto { 
+            Items = new List<OrderItemCreateDto> { new() { MenuItemId = Guid.NewGuid(), Quantity = 0 } } 
+        });
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => handler.Handle(command, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task PlaceOrder_Should_Throw_When_MenuItem_Not_Found()
+    {
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        var handler = new PlaceOrderHandler(db, Substitute.For<IHttpContextAccessor>());
+        var command = new PlaceOrderCommand(new OrderCreateDto { 
+            Items = new List<OrderItemCreateDto> { new() { MenuItemId = Guid.NewGuid(), Quantity = 1 } } 
+        });
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => handler.Handle(command, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task PlaceOrder_Should_Apply_Percentage_Coupon_Correctly()
+    {
+        // Arrange
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        var userId = Guid.NewGuid();
+        var item = new MenuItem(Guid.NewGuid(), "Burger", 100m, null, MenuCategory.BURGER, null, []);
+        db.MenuItems.Add(item);
+
+        var coupon = new Coupon { Id = Guid.NewGuid(), Type = CouponType.PercentageDiscount, DiscountValue = 20, IsActive = true, Name = "20% OFF", Description = "20 percent discount" };
+        db.Coupons.Add(coupon);
+
+        var userCoupon = new UserCoupon { Id = Guid.NewGuid(), UserId = userId, CouponId = coupon.Id, IsUsed = false };
+        db.UserCoupons.Add(userCoupon);
+        await db.SaveChangesAsync();
+
+        var httpContextAccessor = SetupUserContext(userId);
+        var handler = new PlaceOrderHandler(db, httpContextAccessor);
+
+        var command = new PlaceOrderCommand(new OrderCreateDto { 
+            Items = [new() { MenuItemId = item.Id, Quantity = 1 }],
+            UserCouponId = userCoupon.Id
+        });
+
+        // Act
+        var orderId = await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        var order = await db.Orders.FindAsync(orderId);
+        Assert.Equal(80m, order.Total); // 100 - 20%
+        Assert.True(userCoupon.IsUsed);
+    }
+
+    [Fact]
+    public async Task PlaceOrder_Should_Apply_FreeItem_Coupon_Only_If_Item_In_Cart()
+    {
+        // Arrange
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        var userId = Guid.NewGuid();
+        var mainItem = new MenuItem(Guid.NewGuid(), "Pizza", 50m, null, MenuCategory.PIZZA, null, []);
+        var freeItem = new MenuItem(Guid.NewGuid(), "Drink", 10m, null, MenuCategory.DRINK, null, []);
+        db.MenuItems.AddRange(mainItem, freeItem);
+
+        var coupon = new Coupon { Id = Guid.NewGuid(), Type = CouponType.FreeItem, SpecificMenuItemId = freeItem.Id, IsActive = true, Name = "Free Drink", Description = "Free drink with purchase" };
+        db.Coupons.Add(coupon);
+
+        var userCoupon = new UserCoupon { Id = Guid.NewGuid(), UserId = userId, CouponId = coupon.Id, IsUsed = false };
+        db.UserCoupons.Add(userCoupon);
+        await db.SaveChangesAsync();
+
+        var handler = new PlaceOrderHandler(db, SetupUserContext(userId));
+
+        // Act: Comandăm ambele, băutura ar trebui să fie gratis
+        var command = new PlaceOrderCommand(new OrderCreateDto { 
+            Items = [new() { MenuItemId = mainItem.Id, Quantity = 1 }, new() { MenuItemId = freeItem.Id, Quantity = 1 }],
+            UserCouponId = userCoupon.Id
+        });
+        var orderId = await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        var order = await db.Orders.FindAsync(orderId);
+        Assert.Equal(50m, order.Total); // 50 + 10 - 10 (discount)
+    }
+
+    [Fact]
+    public async Task PlaceOrder_Should_Throw_When_MinimumAmount_Not_Met()
+    {
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        var userId = Guid.NewGuid();
+        var item = new MenuItem(Guid.NewGuid(), "Small Item", 10m, null, MenuCategory.OTHER, null, []);
+        db.MenuItems.Add(item);
+
+        var coupon = new Coupon { Id = Guid.NewGuid(), MinimumOrderAmount = 50m, IsActive = true, Name = "Min 50", Description = "Minimum order description"};
+        db.Coupons.Add(coupon);
+        var userCoupon = new UserCoupon { Id = Guid.NewGuid(), UserId = userId, CouponId = coupon.Id };
+        db.UserCoupons.Add(userCoupon);
+        await db.SaveChangesAsync();
+
+        var handler = new PlaceOrderHandler(db, SetupUserContext(userId));
+        var command = new PlaceOrderCommand(new OrderCreateDto { 
+            Items = [new() { MenuItemId = item.Id, Quantity = 1 }],
+            UserCouponId = userCoupon.Id
+        });
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => handler.Handle(command, CancellationToken.None));
+    }
+    
+    private IHttpContextAccessor SetupUserContext(Guid userId)
+    {
+        var http = Substitute.For<IHttpContextAccessor>();
+        var user = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, userId.ToString())]));
+        http.HttpContext.Returns(new DefaultHttpContext { User = user });
+        return http;
+    }
+    
 }

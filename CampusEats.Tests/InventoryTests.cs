@@ -320,4 +320,46 @@ public class InventoryTests
         var transactions = await db.StockTransactions.ToListAsync();
         Assert.Empty(transactions);
     }
+    
+
+    [Fact]
+    public async Task AdjustStock_Should_Return_ValidationProblem_When_Command_Is_Invalid()
+    {
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        var validator = Substitute.For<IValidator<AdjustStockCommand>>();
+        var failures = new List<FluentValidation.Results.ValidationFailure> { new("Quantity", "Must be > 0") };
+        validator.ValidateAsync(Arg.Any<AdjustStockCommand>(), Arg.Any<CancellationToken>())
+            .Returns(new FluentValidation.Results.ValidationResult(failures));
+    
+        var handler = new AdjustStockHandler(db, validator);
+        var command = new AdjustStockCommand(Guid.NewGuid(), -1, StockTransactionType.Restock, null);
+    
+        var result = await handler.Handle(command, CancellationToken.None);
+        
+        var problemResult = Assert.IsType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>(result);
+        Assert.Equal(400, problemResult.StatusCode);
+    }
+
+    [Fact]
+    public async Task AdjustStock_Should_Not_Update_Timestamp_When_Change_Is_Negative()
+    {
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        var initialTime = DateTime.UtcNow.AddDays(-1);
+        var ingredient = new Ingredient { Id = Guid.NewGuid(), Name = "Milk", Unit = "L", CurrentStock = 10, UpdatedAt = initialTime };
+        db.Ingredients.Add(ingredient);
+        await db.SaveChangesAsync();
+    
+        var handler = new AdjustStockHandler(db, SetupValidator<AdjustStockCommand>());
+        // Usage rezultă în changeAmount negativ (-2)
+        await handler.Handle(new AdjustStockCommand(ingredient.Id, 2, StockTransactionType.Usage, null), CancellationToken.None);
+    
+        var updated = await db.Ingredients.FindAsync(ingredient.Id);
+        Assert.Equal(initialTime, updated.UpdatedAt); // Rămâne neschimbat conform logicii din handler
+    }
+
+    private IValidator<T> SetupValidator<T>() where T : class {
+        var v = Substitute.For<IValidator<T>>();
+        v.ValidateAsync(Arg.Any<T>(), Arg.Any<CancellationToken>()).Returns(new FluentValidation.Results.ValidationResult());
+        return v;
+    }
 }

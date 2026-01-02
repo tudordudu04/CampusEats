@@ -392,5 +392,40 @@ public class PaymentsTests
         Assert.Equal(5m, order.DiscountAmount); // Free item price
         Assert.Equal(30m, order.Total);
     }
+    
+
+    [Fact]
+    public async Task ConfirmPayment_Should_Throw_When_Metadata_Is_Missing()
+    {
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        var handler = new ConfirmPaymentHandler(db);
+    
+        // Payload fără metadata
+        var payload = JsonSerializer.Serialize(new { other_field = "value" });
+        var command = new ConfirmPaymentCommand("checkout.session.completed", payload);
+    
+        await Assert.ThrowsAsync<InvalidDataException>(() => handler.Handle(command, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task ConfirmPayment_Should_Support_Nested_Metadata_In_Object()
+    {
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        var handler = new ConfirmPaymentHandler(db);
+    
+        // Structura data.object.metadata suportată de handler
+        var payload = JsonSerializer.Serialize(new { 
+            data = new { 
+                @object = new { 
+                    metadata = new { payment_id = Guid.NewGuid().ToString(), user_id = Guid.NewGuid().ToString(), order_items = "[]" } 
+                } 
+            } 
+        });
+    
+        var command = new ConfirmPaymentCommand("checkout.session.completed", payload);
+    
+        // Nu ar trebui să arunce excepția de "Missing metadata"
+        await handler.Handle(command, CancellationToken.None);
+    }
 }
 

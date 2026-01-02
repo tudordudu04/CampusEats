@@ -116,8 +116,15 @@ builder.Services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
 // builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
-builder.Services.AddDbContext<AppDbContext>(options => 
-    options.UseSqlite("DataSource=campuseats.db"));
+//builder.Services.AddDbContext<AppDbContext>(options => 
+  //  options.UseSqlite("DataSource=campuseats.db"));
+  builder.Services.AddDbContext<AppDbContext>(options => 
+  {
+      var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
+                             ?? "DataSource=campuseats.db";
+      options.UseSqlite(connectionString);
+  });
+
 
 builder.Services.AddHttpContextAccessor();
 const string corsPolicy = "frontend";
@@ -154,7 +161,14 @@ using (var scope = app.Services.CreateScope())
     var hasher = scope.ServiceProvider.GetRequiredService<PasswordHasher<CampusEats.Api.Domain.User>>();
     //await db.Database.EnsureCreatedAsync();
     
-    await db.Database.MigrateAsync();
+    if (db.Database.IsRelational())
+    {
+        await db.Database.MigrateAsync();
+    }
+    else
+    {
+        await db.Database.EnsureCreatedAsync();
+    }
     
     var managerName = builder.Configuration["SeedManager:Name"];
     var managerEmail = builder.Configuration["SeedManager:Email"];
@@ -200,3 +214,5 @@ RedeemPointsEndpoint.Map(app);
 CouponEndpoints.MapCouponEndpoints(app);
 
 app.Run();
+
+public partial class Program { } //pentru testare

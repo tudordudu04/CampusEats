@@ -2,6 +2,7 @@
 using CampusEats.Api.Features.Kitchen.UpdateKitchenTask;
 using CampusEats.Api.Domain;
 using CampusEats.Api.Infrastructure.Loyalty;
+using NSubstitute;
 
 namespace CampusEats.Tests;
 
@@ -197,5 +198,45 @@ public class KitchenTests
         var finalOrder = await db.Orders.FindAsync(orderId);
         Assert.NotNull(finalOrder);
         Assert.Equal(OrderStatus.Completed, finalOrder.Status);
+    }
+    
+    
+
+    [Fact]
+    public async Task UpdateKitchenTask_On_Cancelled_Order_Should_Block_Preparing_Status()
+    {
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        var orderId = Guid.NewGuid();
+        var taskId = Guid.NewGuid();
+    
+        db.Orders.Add(new Order { Id = orderId, Status = OrderStatus.Cancelled, CreatedAt = DateTime.UtcNow, UserId = Guid.NewGuid() });
+        db.KitchenTasks.Add(new KitchenTask { Id = taskId, OrderId = orderId, Status = KitchenTaskStatus.NotStarted });
+        await db.SaveChangesAsync();
+    
+        var handler = new UpdateKitchenTaskHandler(db, Substitute.For<ILoyaltyService>());
+    
+        var result = await handler.Handle(new UpdateKitchenTaskCommand(taskId, null, "Preparing", null), CancellationToken.None);
+        Assert.IsType<Microsoft.AspNetCore.Http.HttpResults.BadRequest<string>>(result); // Conform logicii speciale
+    }
+
+    [Fact]
+    public async Task UpdateKitchenTask_Should_Award_Points_Only_Once()
+    {
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        var orderId = Guid.NewGuid();
+        var taskId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var loyalty = Substitute.For<ILoyaltyService>();
+    
+        db.Orders.Add(new Order { Id = orderId, UserId = userId, Status = OrderStatus.Pending, LoyaltyPointsAwarded = false, Total = 100m, CreatedAt = DateTime.UtcNow });
+        db.KitchenTasks.Add(new KitchenTask { Id = taskId, OrderId = orderId, Status = KitchenTaskStatus.NotStarted });
+        await db.SaveChangesAsync();
+    
+        var handler = new UpdateKitchenTaskHandler(db, loyalty);
+    
+        await handler.Handle(new UpdateKitchenTaskCommand(taskId, null, "Preparing", null), CancellationToken.None);
+        await handler.Handle(new UpdateKitchenTaskCommand(taskId, null, "Preparing", null), CancellationToken.None);
+    
+        await loyalty.Received(1).AwardPointsForOrder(userId, orderId, 100m); // Verifică flag-ul LoyaltyPointsAwarded
     }
 }

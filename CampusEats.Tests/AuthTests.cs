@@ -289,4 +289,105 @@ public class AuthTests
         Assert.NotNull(updatedUser);
         Assert.Equal("New Name", updatedUser.Name);
     }
+    [Fact]
+    public async Task Login_Should_Return_BadRequest_When_User_Does_Not_Exist()
+    {
+        // Arrange
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        var passwordService = Substitute.For<IPasswordService>();
+        var handler = new LoginUserHandler(db, passwordService, Substitute.For<IJwtTokenService>(), Substitute.For<IHttpContextAccessor>());
+    
+        var command = new LoginUserCommand("nonexistent@test.com", "any_pass");
+
+        // Act
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        Assert.IsType<BadRequest<string>>(result);
+    }
+
+    [Fact]
+    public async Task Login_Should_Revoke_Existing_Tokens()
+    {
+        // Arrange
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        var userId = Guid.NewGuid();
+        var user = new User { Id = userId,Name = "Test Name", Email = "test@test.com", PasswordHash = "hash" };
+        db.Users.Add(user);
+    
+        var oldToken = new RefreshToken { UserId = userId, TokenHash = "old_hash", ExpiresAtUtc = DateTime.UtcNow.AddDays(1) };
+        db.RefreshTokens.Add(oldToken);
+        await db.SaveChangesAsync();
+
+        var passwordService = Substitute.For<IPasswordService>();
+        passwordService.Verify(user, "hash", "pass").Returns(true);
+    
+        var jwtService = Substitute.For<IJwtTokenService>();
+        jwtService.GenerateRefreshToken().Returns(("new_rt", "new_hash", DateTime.UtcNow.AddDays(7)));
+
+        var handler = new LoginUserHandler(db, passwordService, jwtService, SetupUserContext(userId));
+    
+        // Act
+        await handler.Handle(new LoginUserCommand("test@test.com", "pass"), CancellationToken.None);
+
+        // Assert
+        var tokenFromDb = await db.RefreshTokens.FirstAsync(t => t.TokenHash == "old_hash");
+        Assert.NotNull(tokenFromDb.RevokedAtUtc); // Verificăm că jetonul vechi a fost revocat
+    }
+    private IHttpContextAccessor SetupUserContext(Guid userId)
+    {
+        var http = Substitute.For<IHttpContextAccessor>();
+        var user = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId.ToString())
+        }, "TestAuth"));
+    
+        var httpContext = new DefaultHttpContext();
+        httpContext.User = user;
+        http.HttpContext.Returns(httpContext);
+    
+        return http;
+    }
+    
+    
+
+    [Fact]
+    public async Task Logout_Should_Return_NoContent_When_Cookie_Is_Missing()
+    {
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        var httpContext = Substitute.For<IHttpContextAccessor>();
+        httpContext.HttpContext.Returns(new DefaultHttpContext()); // Request fără cookie-uri
+    
+        var handler = new LogoutHandler(db, Substitute.For<IJwtTokenService>(), httpContext);
+        var result = await handler.Handle(new LogoutCommand(), CancellationToken.None);
+    
+        Assert.IsType<Microsoft.AspNetCore.Http.HttpResults.NoContent>(result);
+    }
+
+    [Fact]
+    public async Task Refresh_Should_Return_Unauthorized_When_Token_Is_Expired()
+    {
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        var jwt = Substitute.For<IJwtTokenService>();
+        jwt.Hash("expired_token").Returns("hashed");
+    
+        db.RefreshTokens.Add(new RefreshToken { TokenHash = "hashed", ExpiresAtUtc = DateTime.UtcNow.AddHours(-1) });
+        await db.SaveChangesAsync();
+    
+        var http = Substitute.For<IHttpContextAccessor>();
+        var ctx = new DefaultHttpContext();
+        ctx.Request.Cookies = CreateCookieCollection("refresh_token", "expired_token");
+        http.HttpContext.Returns(ctx);
+
+        var handler = new RefreshHandler(db, jwt, http);
+        var result = await handler.Handle(new RefreshCommand(), CancellationToken.None);
+    
+        Assert.IsType<Microsoft.AspNetCore.Http.HttpResults.UnauthorizedHttpResult>(result);
+    }
+
+    private IRequestCookieCollection CreateCookieCollection(string key, string value) {
+        var mock = Substitute.For<IRequestCookieCollection>();
+        mock.TryGetValue(key, out Arg.Any<string>()).Returns(x => { x[1] = value; return true; });
+        return mock;
+    }
 }

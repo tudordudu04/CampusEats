@@ -9,5 +9,7 @@ public record MenuItemDto(
     string? Description,
     MenuCategory Category,
     string? ImageUrl,
-    string[] Allergens
+    string[] Allergens,
+    decimal? AverageRating,
+    int ReviewCount
 );

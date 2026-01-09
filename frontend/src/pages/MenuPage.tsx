@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react'
 import { MenuApi } from '../services/api'
 import type { MenuItem } from '../types'
-import { Plus } from 'lucide-react'
+import { Plus, Star, MessageSquare } from 'lucide-react'
+import { StarRating } from '../components/StarRating'
 
 type Props = {
     onAddToCart: (item: MenuItem) => void
     isLoggedIn?: boolean
+    onViewReviews?: (item: MenuItem) => void
+    refreshTrigger?: number
 }
 
-export default function MenuPage({ onAddToCart, isLoggedIn }: Props) {
+export default function MenuPage({ onAddToCart, isLoggedIn, onViewReviews, refreshTrigger }: Props) {
     const [items, setItems] = useState<MenuItem[]>([])
     const [loading, setLoading] = useState(true)
 
@@ -23,7 +26,7 @@ export default function MenuPage({ onAddToCart, isLoggedIn }: Props) {
             }
         }
         load()
-    }, [])
+    }, [refreshTrigger])
 
     if (loading) return (
         <div className="flex justify-center items-center h-64">
@@ -45,6 +48,19 @@ export default function MenuPage({ onAddToCart, isLoggedIn }: Props) {
                         <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm px-3 py-1 rounded-lg text-sm font-bold text-gray-900 shadow-sm border border-gray-100">
                             {item.price.toFixed(2)} RON
                         </div>
+                        
+                        {/* Rating Badge */}
+                        {item.averageRating !== null && item.averageRating > 0 && (
+                            <div className="absolute bottom-3 right-3 bg-white/95 backdrop-blur-sm px-2 py-1 rounded-lg shadow-sm border border-gray-100 flex items-center gap-1">
+                                <Star size={14} className="text-yellow-400 fill-yellow-400" />
+                                <span className="text-sm font-bold text-gray-900">
+                                    {item.averageRating.toFixed(1)}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                    ({item.reviewCount})
+                                </span>
+                            </div>
+                        )}
                     </div>
                     
                     <div className="p-5 flex flex-col flex-1">
@@ -64,13 +80,25 @@ export default function MenuPage({ onAddToCart, isLoggedIn }: Props) {
                         )}
 
                         {isLoggedIn && (
-                            <button
-                                onClick={() => onAddToCart(item)}
-                                className="w-full flex items-center justify-center gap-2 bg-gray-900 hover:bg-brand-600 active:bg-brand-700 text-white py-3 rounded-xl font-bold text-sm transition-all shadow-lg shadow-gray-200 hover:shadow-brand-500/30"
-                            >
-                                <Plus size={18} />
-                                Adaugă în coș
-                            </button>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => onAddToCart(item)}
+                                    className="flex-1 flex items-center justify-center gap-2 bg-gray-900 hover:bg-brand-600 active:bg-brand-700 text-white py-3 rounded-xl font-bold text-sm transition-all shadow-lg shadow-gray-200 hover:shadow-brand-500/30"
+                                >
+                                    <Plus size={18} />
+                                    Adaugă în coș
+                                </button>
+                                
+                                {onViewReviews && (
+                                    <button
+                                        onClick={() => onViewReviews(item)}
+                                        className="flex items-center justify-center gap-1 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 px-3 py-3 rounded-xl font-medium text-sm transition-all"
+                                        title="Vezi review-uri"
+                                    >
+                                        <MessageSquare size={18} />
+                                    </button>
+                                )}
+                            </div>
                         )}
                     </div>
                 </div>

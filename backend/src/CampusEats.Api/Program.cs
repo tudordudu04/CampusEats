@@ -41,6 +41,7 @@ using CampusEats.Api.Features.Loyalty.RedeemPoints;
 using CampusEats.Api.Features.Menu;
 using CampusEats.Api.Features.Payments;
 using CampusEats.Api.Features.Coupons;
+using CampusEats.Api.Features.Reviews;
 
 var builder = WebApplication.CreateBuilder(args);
 var connectionString = "Host=localhost;Port=5432;Database=campuseats;Username=postgres;Password=postgres";
@@ -195,6 +196,7 @@ MenuEndpoints.MapMenu(app);
 AuthEndpoints.MapAuth(app);
 OrdersEndpoint.MapOrders(app);
 PaymentsEndpoints.MapPayments(app);
+ReviewsEndpoints.MapReviews(app);
 
 CreateKitchenTaskEndpoint.Map(app);
 GetAllKitchenTasksEndpoint.Map(app);

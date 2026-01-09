@@ -1,4 +1,4 @@
-﻿using Xunit;
+using Xunit;
 using CampusEats.Api.Enums;
 using CampusEats.Api.Features.Auth;
 using CampusEats.Api.Features.Auth.Register;
@@ -239,7 +239,7 @@ public class AuthTests
         // Act
         var result = await handler.Handle(command, CancellationToken.None);
         
-        // Assert - verificăm că e un răspuns Ok, fără să specificăm tipul exact
+        // Assert - verific�m c� e un r�spuns Ok, f�r� s� specific�m tipul exact
         Assert.NotNull(result);
         var deletedUser = await db.Users.FindAsync(userId);
         Assert.Null(deletedUser);
@@ -283,7 +283,7 @@ public class AuthTests
         // Act
         var result = await handler.Handle(command, CancellationToken.None);
         
-        // Assert - verificăm că e un răspuns Ok, fără să specificăm tipul exact
+        // Assert - verific�m c� e un r�spuns Ok, f�r� s� specific�m tipul exact
         Assert.NotNull(result);
         var updatedUser = await db.Users.FindAsync(userId);
         Assert.NotNull(updatedUser);
@@ -332,7 +332,7 @@ public class AuthTests
 
         // Assert
         var tokenFromDb = await db.RefreshTokens.FirstAsync(t => t.TokenHash == "old_hash");
-        Assert.NotNull(tokenFromDb.RevokedAtUtc); // Verificăm că jetonul vechi a fost revocat
+        Assert.NotNull(tokenFromDb.RevokedAtUtc); // Verific�m c� jetonul vechi a fost revocat
     }
     private IHttpContextAccessor SetupUserContext(Guid userId)
     {
@@ -356,7 +356,7 @@ public class AuthTests
     {
         using var db = TestDbHelper.GetInMemoryDbContext();
         var httpContext = Substitute.For<IHttpContextAccessor>();
-        httpContext.HttpContext.Returns(new DefaultHttpContext()); // Request fără cookie-uri
+        httpContext.HttpContext.Returns(new DefaultHttpContext()); // Request f�r� cookie-uri
     
         var handler = new LogoutHandler(db, Substitute.For<IJwtTokenService>(), httpContext);
         var result = await handler.Handle(new LogoutCommand(), CancellationToken.None);
@@ -383,6 +383,101 @@ public class AuthTests
         var result = await handler.Handle(new RefreshCommand(), CancellationToken.None);
     
         Assert.IsType<Microsoft.AspNetCore.Http.HttpResults.UnauthorizedHttpResult>(result);
+    }
+
+    [Fact]
+    public async Task RegisterUser_Should_Return_Unauthorized_When_NonStudent_Without_Auth()
+    {
+        // Arrange
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        
+        var passwordService = Substitute.For<IPasswordService>();
+        var jwtService = Substitute.For<IJwtTokenService>();
+        var httpContextAccessor = Substitute.For<IHttpContextAccessor>();
+        
+        // HttpContext is null (no authentication)
+        httpContextAccessor.HttpContext.Returns((HttpContext?)null);
+        
+        var handler = new RegisterUserHandler(db, passwordService, jwtService, httpContextAccessor);
+        var command = new RegisterUserCommand("Worker Test", "Worker@test.com", "Pass123!", UserRole.WORKER);
+        
+        // Act
+        var result = await handler.Handle(command, CancellationToken.None);
+        
+        // Assert
+        Assert.IsType<UnauthorizedHttpResult>(result);
+    }
+
+    [Fact]
+    public async Task RegisterUser_Should_Return_Forbid_When_NonManager_Tries_To_Register_Worker()
+    {
+        // Arrange
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        
+        var passwordService = Substitute.For<IPasswordService>();
+        var jwtService = Substitute.For<IJwtTokenService>();
+        var httpContextAccessor = Substitute.For<IHttpContextAccessor>();
+        
+        // Create authenticated context with STUDENT role (not MANAGER)
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.Role, UserRole.STUDENT.ToString()),
+            new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString())
+        };
+        var identity = new ClaimsIdentity(claims, "TestAuth");
+        var principal = new ClaimsPrincipal(identity);
+        
+        var httpContext = new DefaultHttpContext();
+        httpContext.User = principal;
+        httpContextAccessor.HttpContext.Returns(httpContext);
+        
+        var handler = new RegisterUserHandler(db, passwordService, jwtService, httpContextAccessor);
+        var command = new RegisterUserCommand("Worker Test", "Worker@test.com", "Pass123!", UserRole.WORKER);
+        
+        // Act
+        var result = await handler.Handle(command, CancellationToken.None);
+        
+        // Assert
+        Assert.IsType<ForbidHttpResult>(result);
+    }
+
+    [Fact]
+    public async Task RegisterUser_Should_Return_Ok_When_Manager_Creates_Worker()
+    {
+        // Arrange
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        
+        var passwordService = Substitute.For<IPasswordService>();
+        var jwtService = Substitute.For<IJwtTokenService>();
+        var httpContextAccessor = Substitute.For<IHttpContextAccessor>();
+        
+        passwordService.Hash(Arg.Any<User>(), Arg.Any<string>()).Returns("hashed_pass");
+        jwtService.GenerateAccessToken(Arg.Any<User>()).Returns("jwt_token");
+        
+        // Create authenticated context with MANAGER role
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.Role, UserRole.MANAGER.ToString()),
+            new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString())
+        };
+        var identity = new ClaimsIdentity(claims, "TestAuth");
+        var principal = new ClaimsPrincipal(identity);
+        
+        var httpContext = new DefaultHttpContext();
+        httpContext.User = principal;
+        httpContextAccessor.HttpContext.Returns(httpContext);
+        
+        var handler = new RegisterUserHandler(db, passwordService, jwtService, httpContextAccessor);
+        var command = new RegisterUserCommand("Worker Test", "Worker@test.com", "Pass123!", UserRole.WORKER);
+        
+        // Act
+        var result = await handler.Handle(command, CancellationToken.None);
+        
+        // Assert
+        Assert.IsType<Ok<AuthResultDto>>(result);
+        var okResult = (Ok<AuthResultDto>)result;
+        Assert.NotNull(okResult.Value);
+        Assert.NotNull(okResult.Value.AccessToken);
     }
 
     private IRequestCookieCollection CreateCookieCollection(string key, string value) {

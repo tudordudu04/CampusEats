@@ -1,4 +1,4 @@
-import type { CreateMenuItem, MenuItem, UpdateMenuItem, OrderDto, KitchenTaskDto, LoyaltyAccount, LoyaltyTransactionDto, InventoryItemDto } from '../types'
+import type { CreateMenuItem, MenuItem, UpdateMenuItem, OrderDto, KitchenTaskDto, LoyaltyAccount, LoyaltyTransactionDto, InventoryItemDto, ReviewDto, MenuItemRatingDto, AddReviewRequest, UpdateReviewRequest } from '../types'
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -231,5 +231,33 @@ export const InventoryApi = {
         request(`/api/inventory/adjust`, {
             method: 'PUT',
             body: JSON.stringify({ ingredientId, quantity, type, note })
+        })
+}
+
+export const ReviewsApi = {
+    getMenuItemReviews: (menuItemId: string) => 
+        request<ReviewDto[]>(`/api/menu/${menuItemId}/reviews`),
+    
+    getMyReview: (menuItemId: string) => 
+        request<ReviewDto>(`/api/menu/${menuItemId}/reviews/mine`),
+    
+    getMenuItemRating: (menuItemId: string) => 
+        request<MenuItemRatingDto>(`/api/menu/${menuItemId}/rating`),
+    
+    addReview: (data: AddReviewRequest) => 
+        request<ReviewDto>('/api/reviews', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        }),
+    
+    updateReview: (reviewId: string, data: UpdateReviewRequest) => 
+        request<ReviewDto>(`/api/reviews/${reviewId}`, {
+            method: 'PUT',
+            body: JSON.stringify(data)
+        }),
+    
+    deleteReview: (reviewId: string) => 
+        request<void>(`/api/reviews/${reviewId}`, {
+            method: 'DELETE'
         })
 }

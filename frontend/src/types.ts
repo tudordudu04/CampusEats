@@ -27,6 +27,8 @@ export type MenuItem = {
     category: number
     imageUrl: string | null
     allergens: string[]
+    averageRating: number | null
+    reviewCount: number
 }
 
 export type CreateMenuItem = {
@@ -164,3 +166,35 @@ export type user = {
     addressDetails?: string | null
 
 }
+
+// --- Review Types ---
+
+
+export type ReviewDto = {
+    id: string
+    menuItemId: string
+    userId: string
+    userName: string
+    rating: number
+    comment: string | null
+    createdAtUtc: string
+    updatedAtUtc: string
+}
+
+export type MenuItemRatingDto = {
+    menuItemId: string
+    averageRating: number
+    totalReviews: number
+}
+
+export type AddReviewRequest = {
+    menuItemId: string
+    rating: number
+    comment: string | null
+}
+
+export type UpdateReviewRequest = {
+    rating: number
+    comment: string | null
+}
+

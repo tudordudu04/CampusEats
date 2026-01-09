@@ -9,16 +9,36 @@ public class GetAllMenuItemsHandler(AppDbContext db)
 {
     public async Task<IReadOnlyList<MenuItemDto>> Handle(GetAllMenuItemsQuery request, CancellationToken ct)
     {
-        return await db.MenuItems
+        var menuItems = await db.MenuItems.AsNoTracking().ToListAsync(ct);
+        
+        var menuItemIds = menuItems.Select(m => m.Id).ToList();
+        
+        var ratings = await db.MenuItemReviews
             .AsNoTracking()
-            .Select(m => new MenuItemDto(
+            .Where(r => menuItemIds.Contains(r.MenuItemId))
+            .GroupBy(r => r.MenuItemId)
+            .Select(g => new
+            {
+                MenuItemId = g.Key,
+                AverageRating = g.Average(r => r.Rating),
+                ReviewCount = g.Count()
+            })
+            .ToListAsync(ct);
+
+        return menuItems.Select(m =>
+        {
+            var rating = ratings.FirstOrDefault(r => r.MenuItemId == m.Id);
+            return new MenuItemDto(
                 m.Id,
                 m.Name,
                 m.Price,
                 m.Description,
                 m.Category,
                 m.ImageUrl,
-                m.Allergens))
-            .ToListAsync(ct);
+                m.Allergens,
+                rating != null ? Math.Round(rating.AverageRating, 1) : null,
+                rating?.ReviewCount ?? 0
+            );
+        }).ToList();
     }
 }

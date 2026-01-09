@@ -8,10 +8,35 @@ public class GetMenuItemHandler(AppDbContext db) : IRequestHandler<GetMenuItemQu
 {
     public async Task<MenuItemDto?> Handle(GetMenuItemQuery request, CancellationToken ct)
     {
-        return await db.MenuItems
+        var menuItem = await db.MenuItems
             .AsNoTracking()
             .Where(x => x.Id == request.Id)
-            .Select(x => new MenuItemDto(x.Id, x.Name, x.Price, x.Description, x.Category, x.ImageUrl, x.Allergens))
             .FirstOrDefaultAsync(ct);
+
+        if (menuItem == null)
+            return null;
+
+        var rating = await db.MenuItemReviews
+            .AsNoTracking()
+            .Where(r => r.MenuItemId == menuItem.Id)
+            .GroupBy(r => r.MenuItemId)
+            .Select(g => new
+            {
+                AverageRating = g.Average(r => r.Rating),
+                ReviewCount = g.Count()
+            })
+            .FirstOrDefaultAsync(ct);
+
+        return new MenuItemDto(
+            menuItem.Id,
+            menuItem.Name,
+            menuItem.Price,
+            menuItem.Description,
+            menuItem.Category,
+            menuItem.ImageUrl,
+            menuItem.Allergens,
+            rating != null ? Math.Round(rating.AverageRating, 1) : null,
+            rating?.ReviewCount ?? 0
+        );
     }
 }

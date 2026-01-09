@@ -22,6 +22,7 @@ import { useLoyaltyPoints } from './hooks/useLoyaltyPoints'
 import InventoryPage from "./pages/InventoryPage"
 import { CouponsPage } from './pages/CouponsPage';
 import ProfilePage from "./pages/ProfilePage"
+import { ReviewsModal } from './components/ReviewsModal'
 type CartItem = { item: MenuItem; quantity: number }
 
 // Componenta ajutătoare pentru link-uri de navigare
@@ -329,6 +330,8 @@ export default function App() {
     const [user, setUser] = useState<any>(null)
     const [cart, setCart] = useState<CartItem[]>([])
     const [isRefreshing, setIsRefreshing] = useState<boolean>(() => !!AuthApi.getToken())
+    const [reviewsModalItem, setReviewsModalItem] = useState<MenuItem | null>(null)
+    const [menuRefreshTrigger, setMenuRefreshTrigger] = useState(0)
     
 
     useEffect(() => {
@@ -440,7 +443,12 @@ export default function App() {
                                 <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">Meniu Delicios 🍔</h1>
                                 <p className="text-gray-500 mt-2 text-lg">Comandă mâncarea preferată direct din campus.</p>
                             </div>
-                            <MenuPage onAddToCart={addToCart} isLoggedIn={!!token} />
+                            <MenuPage 
+                                onAddToCart={addToCart} 
+                                isLoggedIn={!!token}
+                                onViewReviews={setReviewsModalItem}
+                                refreshTrigger={menuRefreshTrigger}
+                            />
                             {token && (
                                 <OrderCart
                                     cart={cart}
@@ -448,6 +456,13 @@ export default function App() {
                                     onUpdateQuantity={updateQuantity}
                                 />
                             )}
+                            <ReviewsModal
+                                menuItem={reviewsModalItem as MenuItem}
+                                isOpen={!!reviewsModalItem}
+                                onClose={() => setReviewsModalItem(null)}
+                                currentUserId={user?.id}
+                                onReviewChange={() => setMenuRefreshTrigger(prev => prev + 1)}
+                            />
                         </>
                     } />
                     

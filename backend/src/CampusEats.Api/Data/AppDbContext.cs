@@ -20,6 +20,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<StockTransaction> StockTransactions { get; set; }
     public DbSet<Coupon> Coupons => Set<Coupon>();
     public DbSet<UserCoupon> UserCoupons => Set<UserCoupon>();
+    public DbSet<MenuItemReview> MenuItemReviews => Set<MenuItemReview>();
 
     public async Task EnsureSeedManagerAsync(
         string name,
@@ -63,6 +64,27 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .WithOne(uc => uc.UsedInOrder)
             .HasForeignKey<Order>(o => o.AppliedCouponId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        // Configure MenuItemReview with unique constraint (one review per user per menu item)
+        modelBuilder.Entity<MenuItemReview>()
+            .HasIndex(r => new { r.MenuItemId, r.UserId })
+            .IsUnique();
+
+        modelBuilder.Entity<MenuItemReview>()
+            .HasOne(r => r.MenuItem)
+            .WithMany()
+            .HasForeignKey(r => r.MenuItemId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<MenuItemReview>()
+            .HasOne(r => r.User)
+            .WithMany()
+            .HasForeignKey(r => r.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<MenuItemReview>()
+            .Property(r => r.Rating)
+            .HasPrecision(2, 1); // Allows values like 4.5
     }
     
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

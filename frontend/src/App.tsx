@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Link, Navigate, useLocation } from 'react-router-dom'
 import { jwtDecode } from 'jwt-decode'
 import { AuthApi } from './services/api'
-import { LogOut, Pizza, ShoppingBag, ClipboardList, ChefHat, Settings, Gift, Warehouse, Ticket, User } from 'lucide-react'
+import { LogOut, Pizza, ShoppingBag, ClipboardList, ChefHat, Settings, Gift, Warehouse, Ticket, User, Moon, Sun, Languages } from 'lucide-react'
 import type { MenuItem } from './types'
+import { useTheme } from './contexts/ThemeContext'
+import { useLanguage } from './contexts/LanguageContext'
 
 
 // Pagini
@@ -32,8 +34,8 @@ function NavLink({ to, icon: Icon, children, active }: any) {
             to={to} 
             className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all font-medium text-sm
             ${active
-                ? 'bg-brand-100 text-brand-700 border-brand-300 shadow'
-                : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-brand-50 hover:text-brand-700 hover:border-brand-200'}`}
+                ? 'bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-400 border-brand-300 dark:border-brand-700 shadow'
+                : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 border-gray-200 dark:border-slate-600 hover:bg-brand-50 dark:hover:bg-slate-600 hover:text-brand-700 dark:hover:text-brand-400 hover:border-brand-200 dark:hover:border-brand-700'}`}
         >
             <Icon size={18} />
             {children}
@@ -117,11 +119,14 @@ function Layout({ children, role, onLogout,user }: any) {
     const { points: loyaltyPoints } = useLoyaltyPoints(role === 'STUDENT')
     const points = loyaltyPoints ?? 0
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const { theme, toggleTheme } = useTheme()
+    const { language, toggleLanguage } = useLanguage()
+    
     return (
-        <div className="min-h-screen flex flex-col bg-gray-50 font-sans overflow-hidden">
+        <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-slate-900 font-sans overflow-hidden transition-colors duration-200">
             <header className={`
-            sticky top-0 z-40 border-b shadow-sm
-            ${isMenuOpen ? 'bg-white' : 'bg-white/90 backdrop-blur-md'}
+            sticky top-0 z-40 border-b dark:border-slate-700 shadow-sm
+            ${isMenuOpen ? 'bg-white dark:bg-slate-800' : 'bg-white/90 dark:bg-slate-800/90 backdrop-blur-md'}
           `}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-16 items-center">
@@ -136,7 +141,7 @@ function Layout({ children, role, onLogout,user }: any) {
                         </div>
                         
                         <button
-                            className="flex md:hidden items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-gray-700 shadow-sm"
+                            className="flex md:hidden items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-slate-200 shadow-sm dark:bg-slate-700"
                             onClick={() => setIsMenuOpen(true)}
                             aria-label="Open menu"
                         >
@@ -145,22 +150,22 @@ function Layout({ children, role, onLogout,user }: any) {
                         
                         {/* Navigare Desktop */}
                         <nav className="hidden md:flex flex-wrap gap-2 md:flex-nowrap">
-                            <NavLink to="/" icon={ShoppingBag} active={location.pathname === '/'}>Meniu</NavLink>
+                            <NavLink to="/" icon={ShoppingBag} active={location.pathname === '/'}>{language === 'ro' ? 'Meniu' : 'Menu'}</NavLink>
                             
                             {role && (
-                                <NavLink to="/orders" icon={ClipboardList} active={location.pathname === '/orders'}>Comenzi</NavLink>
+                                <NavLink to="/orders" icon={ClipboardList} active={location.pathname === '/orders'}>{language === 'ro' ? 'Comenzi' : 'Orders'}</NavLink>
                             )}
 
                             {role === 'STUDENT' && (
-                                <NavLink to="/coupons" icon={Ticket} active={location.pathname === '/coupons'}>Cupoane</NavLink>
+                                <NavLink to="/coupons" icon={Ticket} active={location.pathname === '/coupons'}>{language === 'ro' ? 'Cupoane' : 'Coupons'}</NavLink>
                             )}
                             
                             {(role === 'WORKER' || role === 'MANAGER') && (
-                                <NavLink to="/kitchen" icon={ChefHat} active={location.pathname === '/kitchen'}>Bucătărie</NavLink>
+                                <NavLink to="/kitchen" icon={ChefHat} active={location.pathname === '/kitchen'}>{language === 'ro' ? 'Bucătărie' : 'Kitchen'}</NavLink>
                             )}
 
                             {(role === 'WORKER' || role === 'MANAGER') && (
-                                <NavLink to="/inventory" icon={Warehouse} active={location.pathname === '/inventory'}>Inventar</NavLink>
+                                <NavLink to="/inventory" icon={Warehouse} active={location.pathname === '/inventory'}>{language === 'ro' ? 'Inventar' : 'Inventory'}</NavLink>
                             )}
                             
                             {(role === 'MANAGER') && (
@@ -171,81 +176,140 @@ function Layout({ children, role, onLogout,user }: any) {
                         {/* Navigare Mobile */}
                         <div className={`
                             fixed right-0 top-0 z-50 md:hidden
-                            bg-white rounded-l-lg p-2 shadow-sm w-64 h-screen
+                            bg-white dark:bg-slate-800 rounded-l-lg p-2 shadow-sm w-64 h-screen
                             transform transition-transform duration-200 ease-in-out
                             ${isMenuOpen ? 'translate-x-0 pointer-events-auto' : 'translate-x-full pointer-events-none'}
                           `}
                         >
                             <div className="flex flex-col gap-2">
-                                <div className="flex items-center justify-between px-3 py-2 text-sm font-semibold border-b border-gray-200">
-                                    Navigation
-                                    <button className="bg-gray-100 hover:bg-brand-50 text-black border font-bold px-2 rounded hover:border-brand-200" onClick={() => setIsMenuOpen(false)}>
+                                <div className="flex items-center justify-between px-3 py-2 text-sm font-semibold border-b border-gray-200 dark:border-slate-700 dark:text-slate-200">
+                                    {language === 'ro' ? 'Navigare' : 'Navigation'}
+                                    <button className="bg-gray-100 dark:bg-slate-700 hover:bg-brand-50 dark:hover:bg-slate-600 text-black dark:text-slate-200 border dark:border-slate-600 font-bold px-2 rounded hover:border-brand-200" onClick={() => setIsMenuOpen(false)}>
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
                                         </svg>
                                     </button>
                                 </div>
                                 <nav className="flex flex-col gap-2">
-                                    <NavLink to="/" icon={ShoppingBag} active={location.pathname === '/'}>Meniu</NavLink>
+                                    <NavLink to="/" icon={ShoppingBag} active={location.pathname === '/'}>{language === 'ro' ? 'Meniu' : 'Menu'}</NavLink>
 
                                     {role && (
-                                        <NavLink to="/orders" icon={ClipboardList} active={location.pathname === '/orders'}>Comenzi</NavLink>
+                                        <NavLink to="/orders" icon={ClipboardList} active={location.pathname === '/orders'}>{language === 'ro' ? 'Comenzi' : 'Orders'}</NavLink>
                                     )}
 
                                     {role === 'STUDENT' && (
-                                        <NavLink to="/coupons" icon={Ticket} active={location.pathname === '/coupons'}>Cupoane</NavLink>
+                                        <NavLink to="/coupons" icon={Ticket} active={location.pathname === '/coupons'}>{language === 'ro' ? 'Cupoane' : 'Coupons'}</NavLink>
                                     )}
 
                                     {(role === 'WORKER' || role === 'MANAGER') && (
-                                        <NavLink to="/kitchen" icon={ChefHat} active={location.pathname === '/kitchen'}>Bucătărie</NavLink>
+                                        <NavLink to="/kitchen" icon={ChefHat} active={location.pathname === '/kitchen'}>{language === 'ro' ? 'Bucătărie' : 'Kitchen'}</NavLink>
                                     )}
 
                                     {(role === 'WORKER' || role === 'MANAGER') && (
-                                        <NavLink to="/inventory" icon={Warehouse} active={location.pathname === '/inventory'}>Inventar</NavLink>
+                                        <NavLink to="/inventory" icon={Warehouse} active={location.pathname === '/inventory'}>{language === 'ro' ? 'Inventar' : 'Inventory'}</NavLink>
                                     )}
 
                                     {(role === 'MANAGER') && (
                                         <NavLink to="/admin" icon={Settings} active={location.pathname === '/admin'}>Admin</NavLink>
                                     )}
                                     {role ?(
-                                            <div className="mt-2 border-t border-gray-200 pt-3 flex flex-col gap-2">
+                                            <div className="mt-2 border-t border-gray-200 dark:border-slate-700 pt-3 flex flex-col gap-2">
                                                 {/* Link Puncte Loialitate - doar pentru STUDENT */}
                                                 {role === 'STUDENT' && (
                                                     <>
-                                                        <Link to="/loyalty" className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 hover:bg-amber-100 rounded-full text-amber-700 text-sm font-semibold shadow-sm transition-colors cursor-pointer" title="Vezi Detalii Puncte">
+                                                        <Link to="/loyalty" className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/50 rounded-full text-amber-700 dark:text-amber-400 text-sm font-semibold shadow-sm transition-colors cursor-pointer" title="Vezi Detalii Puncte">
                                                             <Gift size={14} />
                                                             <span>{points}</span>
                                                         </Link>
                                                     </>
                                                 )}
+                                                
+                                                {/* Buton Dark Mode Toggle - Mobile */}
+                                                <button
+                                                    onClick={toggleTheme}
+                                                    className="flex items-center gap-2 text-gray-500 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors text-sm font-medium hover:bg-brand-50 dark:hover:bg-slate-700 px-3 py-1.5 rounded-lg"
+                                                    title={theme === 'light' ? (language === 'ro' ? 'Mod întunecat' : 'Dark mode') : (language === 'ro' ? 'Mod luminos' : 'Light mode')}
+                                                >
+                                                    {theme === 'light' ? (
+                                                        <>
+                                                            <Moon size={18} />
+                                                            <span>{language === 'ro' ? 'Mod întunecat' : 'Dark mode'}</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Sun size={18} />
+                                                            <span>{language === 'ro' ? 'Mod luminos' : 'Light mode'}</span>
+                                                        </>
+                                                    )}
+                                                </button>
+                                                
+                                                {/* Buton Schimbare Limbă - Mobile */}
+                                                <button
+                                                    onClick={toggleLanguage}
+                                                    className="flex items-center gap-2 text-gray-500 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors text-sm font-medium hover:bg-brand-50 dark:hover:bg-slate-700 px-3 py-1.5 rounded-lg"
+                                                    title={language === 'ro' ? 'Switch to English' : 'Schimbă în Română'}
+                                                >
+                                                    <Languages size={18} />
+                                                    <span className="uppercase">{language === 'ro' ? 'RO → EN' : 'EN → RO'}</span>
+                                                </button>
+                                                
                                                 <Link 
                                                     to="/profile"
-                                                    className="flex items-center gap-2 text-gray-500 hover:text-brand-600 transition-colors text-sm font-medium hover:bg-blue-50 px-3 py-1.5 rounded-lg"
-                                                    title="Profilul Meu"
+                                                    className="flex items-center gap-2 text-gray-500 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors text-sm font-medium hover:bg-blue-50 dark:hover:bg-slate-700 px-3 py-1.5 rounded-lg"
+                                                    title={language === 'ro' ? 'Profilul Meu' : 'My Profile'}
                                                     >
                                                         {user?.profilePictureUrl ? (
                                                             <img
                                                                 src={user.profilePictureUrl}
-                                                                alt="Profil"
-                                                                className="w-6 h-6 rounded-full object-cover border border-gray-200"
+                                                                alt={language === 'ro' ? 'Profil' : 'Profile'}
+                                                                className="w-6 h-6 rounded-full object-cover border border-gray-200 dark:border-slate-600"
                                                             />
                                                         ) : (
                                                             <User size={18} />
                                                         )}
-                                                        <span className="hidden sm:inline">Profil</span>
+                                                        <span className="hidden sm:inline">{language === 'ro' ? 'Profil' : 'Profile'}</span>
                                                     </Link>
                                                 <button
                                                     onClick={onLogout}
-                                                    className="flex items-center gap-2 text-gray-500 hover:text-red-600 transition-colors text-sm font-medium hover:bg-red-50 px-3 py-1.5 rounded-lg"
-                                                    title="Deconectare"
+                                                    className="flex items-center gap-2 text-gray-500 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 transition-colors text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/30 px-3 py-1.5 rounded-lg"
+                                                    title={language === 'ro' ? 'Deconectare' : 'Logout'}
                                                 >
                                                     <LogOut size={18} />
-                                                    Deconectare
+                                                    {language === 'ro' ? 'Deconectare' : 'Logout'}
                                                 </button>
                                             </div>
                                         )
                                         : (
-                                        <div className="mt-2 border-t border-gray-200 pt-3 flex flex-col gap-2">
+                                        <div className="mt-2 border-t border-gray-200 dark:border-slate-700 pt-3 flex flex-col gap-2">
+                                            {/* Buton Dark Mode Toggle - Mobile pentru utilizatori neautentificați */}
+                                            <button
+                                                onClick={toggleTheme}
+                                                className="flex items-center gap-2 text-gray-500 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors text-sm font-medium hover:bg-brand-50 dark:hover:bg-slate-700 px-3 py-1.5 rounded-lg"
+                                                title={theme === 'light' ? (language === 'ro' ? 'Mod întunecat' : 'Dark mode') : (language === 'ro' ? 'Mod luminos' : 'Light mode')}
+                                            >
+                                                {theme === 'light' ? (
+                                                    <>
+                                                        <Moon size={18} />
+                                                        <span>{language === 'ro' ? 'Mod întunecat' : 'Dark mode'}</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Sun size={18} />
+                                                        <span>{language === 'ro' ? 'Mod luminos' : 'Light mode'}</span>
+                                                    </>
+                                                )}
+                                            </button>
+                                            
+                                            {/* Buton Schimbare Limbă - Mobile */}
+                                            <button
+                                                onClick={toggleLanguage}
+                                                className="flex items-center gap-2 text-gray-500 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors text-sm font-medium hover:bg-brand-50 dark:hover:bg-slate-700 px-3 py-1.5 rounded-lg"
+                                                title={language === 'ro' ? 'Switch to English' : 'Schimbă în Română'}
+                                            >
+                                                <Languages size={18} />
+                                                <span className="uppercase">{language === 'ro' ? 'RO → EN' : 'EN → RO'}</span>
+                                            </button>
+                                            
                                             <Link
                                                 to="/login"
                                                 onClick={() => setIsMenuOpen(false)}
@@ -272,41 +336,92 @@ function Layout({ children, role, onLogout,user }: any) {
                                     {/* Link Puncte Loialitate - doar pentru STUDENT */}
                                     {role === 'STUDENT' && (
                                         <>
-                                            <Link to="/loyalty" className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 hover:bg-amber-100 rounded-full text-amber-700 text-sm font-semibold shadow-sm transition-colors cursor-pointer" title="Vezi Detalii Puncte">
+                                            <Link to="/loyalty" className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/50 rounded-full text-amber-700 dark:text-amber-400 text-sm font-semibold shadow-sm transition-colors cursor-pointer" title="Vezi Detalii Puncte">
                                                 <Gift size={14} />
                                                 <span>{points}</span>
                                             </Link>
-                                            <div className="h-6 w-px bg-gray-300 mx-1"></div>
+                                            <div className="h-6 w-px bg-gray-300 dark:bg-slate-600 mx-1"></div>
                                         </>
                                     )}
+                                    
+                                    {/* Buton Dark Mode Toggle */}
+                                    <button
+                                        onClick={toggleTheme}
+                                        className="flex items-center justify-center p-2 text-gray-500 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors hover:bg-brand-50 dark:hover:bg-slate-700 rounded-lg"
+                                        title={theme === 'light' ? (language === 'ro' ? 'Mod întunecat' : 'Dark mode') : (language === 'ro' ? 'Mod luminos' : 'Light mode')}
+                                        aria-label="Toggle theme"
+                                    >
+                                        {theme === 'light' ? (
+                                            <Moon size={20} />
+                                        ) : (
+                                            <Sun size={20} />
+                                        )}
+                                    </button>
+                                    
+                                    {/* Buton Schimbare Limbă */}
+                                    <button
+                                        onClick={toggleLanguage}
+                                        className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-gray-500 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors hover:bg-brand-50 dark:hover:bg-slate-700 rounded-lg font-medium text-sm"
+                                        title={language === 'ro' ? 'Switch to English' : 'Schimbă în Română'}
+                                        aria-label="Toggle language"
+                                    >
+                                        <Languages size={18} />
+                                        <span className="uppercase">{language}</span>
+                                    </button>
+                                    
                                     <Link
                                         to="/profile"
-                                        className="flex items-center gap-2 text-gray-500 hover:text-brand-600 transition-colors text-sm font-medium hover:bg-brand-50 px-3 py-1.5 rounded-lg"
-                                        title="Profilul Meu"
+                                        className="flex items-center gap-2 text-gray-500 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors text-sm font-medium hover:bg-brand-50 dark:hover:bg-slate-700 px-3 py-1.5 rounded-lg"
+                                        title={language === 'ro' ? 'Profilul Meu' : 'My Profile'}
                                         >
                                         {user?.profilePictureUrl ? (
                                             <img
                                                 src={user.profilePictureUrl}
-                                                alt="Profil"
-                                                className="w-6 h-6 rounded-full object-cover border border-gray-200"
+                                                alt={language === 'ro' ? 'Profil' : 'Profile'}
+                                                className="w-6 h-6 rounded-full object-cover border border-gray-200 dark:border-slate-600"
                                             />
                                         ) : (
                                             <User size={18} />
                                         )}
-                                            <span className="hidden sm:inline">Profil</span>
+                                            <span className="hidden sm:inline">{language === 'ro' ? 'Profil' : 'Profile'}</span>
                                         </Link>
 
                                     <button
                                         onClick={onLogout}
-                                        className="flex items-center gap-2 text-gray-500 hover:text-red-600 transition-colors text-sm font-medium hover:bg-red-50 px-3 py-1.5 rounded-lg"
-                                        title="Deconectare"
+                                        className="flex items-center gap-2 text-gray-500 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 transition-colors text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/30 px-3 py-1.5 rounded-lg"
+                                        title={language === 'ro' ? 'Deconectare' : 'Logout'}
                                     >
                                         <LogOut size={18} />
                                     </button>
                                 </div>
                             ) : (
-                                <div className="flex gap-3">
-                                    <Link to="/login" className="text-gray-600 hover:text-brand-600 font-medium text-sm px-3 py-2">Login</Link>
+                                <div className="flex gap-3 items-center">
+                                    {/* Buton Dark Mode Toggle pentru utilizatori neautentificați */}
+                                    <button
+                                        onClick={toggleTheme}
+                                        className="flex items-center justify-center p-2 text-gray-500 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors hover:bg-brand-50 dark:hover:bg-slate-700 rounded-lg"
+                                        title={theme === 'light' ? (language === 'ro' ? 'Mod întunecat' : 'Dark mode') : (language === 'ro' ? 'Mod luminos' : 'Light mode')}
+                                        aria-label="Toggle theme"
+                                    >
+                                        {theme === 'light' ? (
+                                            <Moon size={20} />
+                                        ) : (
+                                            <Sun size={20} />
+                                        )}
+                                    </button>
+                                    
+                                    {/* Buton Schimbare Limbă */}
+                                    <button
+                                        onClick={toggleLanguage}
+                                        className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-gray-500 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors hover:bg-brand-50 dark:hover:bg-slate-700 rounded-lg font-medium text-sm"
+                                        title={language === 'ro' ? 'Switch to English' : 'Schimbă în Română'}
+                                        aria-label="Toggle language"
+                                    >
+                                        <Languages size={18} />
+                                        <span className="uppercase">{language}</span>
+                                    </button>
+                                    
+                                    <Link to="/login" className="text-gray-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 font-medium text-sm px-3 py-2">Login</Link>
                                     <Link to="/register" className="bg-brand-600 hover:bg-brand-700 text-white px-5 py-2 rounded-full text-sm font-medium shadow-md shadow-brand-500/30 transition-all hover:scale-105">
                                         Sign Up
                                     </Link>
@@ -317,7 +432,7 @@ function Layout({ children, role, onLogout,user }: any) {
                 </div>
             </header>
             
-            <main className="flex-1 w-full mx-auto px-2 sm:px-4 md:px-6 lg:px-8 md:max-w-3xl lg:max-w-5xl xl:max-w-7xl py-8 animate-fade-in ">
+            <main className="flex-1 w-full mx-auto px-2 sm:px-4 md:px-6 lg:px-8 md:max-w-3xl lg:max-w-5xl xl:max-w-7xl py-8 animate-fade-in dark:text-slate-100">
                 {children}
             </main>
         </div>
@@ -332,6 +447,7 @@ export default function App() {
     const [isRefreshing, setIsRefreshing] = useState<boolean>(() => !!AuthApi.getToken())
     const [reviewsModalItem, setReviewsModalItem] = useState<MenuItem | null>(null)
     const [menuRefreshTrigger, setMenuRefreshTrigger] = useState(0)
+    const { language } = useLanguage()
     
 
     useEffect(() => {
@@ -429,7 +545,7 @@ export default function App() {
 
     const onPaymentSuccess = () => {
         setCart([])
-        alert("Plată realizată cu succes!")
+        alert(language === 'ro' ? "Plată realizată cu succes!" : "Payment successful!")
         window.location.href = '/orders'
     }
 
@@ -440,8 +556,12 @@ export default function App() {
                     <Route path="/" element={
                         <>
                             <div className="mb-8 text-center md:text-left">
-                                <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">Meniu Delicios 🍔</h1>
-                                <p className="text-gray-500 mt-2 text-lg">Comandă mâncarea preferată direct din campus.</p>
+                                <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-slate-100 tracking-tight">
+                                    {language === 'ro' ? 'Meniu Delicios 🍔' : 'Delicious Menu 🍔'}
+                                </h1>
+                                <p className="text-gray-500 dark:text-slate-400 mt-2 text-lg">
+                                    {language === 'ro' ? 'Comandă mâncarea preferată direct din campus.' : 'Order your favorite food directly from campus.'}
+                                </p>
                             </div>
                             <MenuPage 
                                 onAddToCart={addToCart} 

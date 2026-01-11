@@ -4,6 +4,7 @@ using CampusEats.Api.Features.Coupons.CreateCoupon;
 using CampusEats.Api.Features.Coupons.PurchaseCoupon;
 using CampusEats.Api.Features.Coupons.GetAvailableCoupons;
 using CampusEats.Api.Features.Coupons.GetUserCoupons;
+using CampusEats.Api.Features.Coupons.DeleteCoupon;
 using CampusEats.Api.Domain;
 using Microsoft.EntityFrameworkCore;
 
@@ -485,4 +486,213 @@ public class CouponsTests
         Assert.Single(result);
         Assert.Equal("My Coupon", result[0].CouponName);
         Assert.False(result[0].IsUsed);
-    }}
+    }
+
+    [Fact]
+    public async Task CreateCouponValidator_Should_Pass_When_All_Fields_Are_Valid()
+    {
+        var validator = new CreateCouponValidator();
+        var command = new CreateCouponCommand(
+            Name: "Valid Coupon",
+            Description: "A valid coupon description",
+            Type: CouponType.PercentageDiscount,
+            DiscountValue: 15m,
+            PointsCost: 50,
+            SpecificMenuItemId: null,
+            MinimumOrderAmount: 20m,
+            ExpiresAtUtc: DateTime.UtcNow.AddDays(30)
+        );
+
+        var result = await validator.ValidateAsync(command);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public async Task CreateCouponValidator_Should_Fail_When_Name_Is_Empty()
+    {
+        var validator = new CreateCouponValidator();
+        var command = new CreateCouponCommand(
+            Name: "",
+            Description: "Description",
+            Type: CouponType.PercentageDiscount,
+            DiscountValue: 10m,
+            PointsCost: 50,
+            SpecificMenuItemId: null,
+            MinimumOrderAmount: null,
+            ExpiresAtUtc: null
+        );
+
+        var result = await validator.ValidateAsync(command);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "Name is required");
+    }
+
+    [Fact]
+    public async Task CreateCouponValidator_Should_Fail_When_Name_Exceeds_Maximum_Length()
+    {
+        var validator = new CreateCouponValidator();
+        var command = new CreateCouponCommand(
+            Name: new string('A', 101),
+            Description: "Description",
+            Type: CouponType.PercentageDiscount,
+            DiscountValue: 10m,
+            PointsCost: 50,
+            SpecificMenuItemId: null,
+            MinimumOrderAmount: null,
+            ExpiresAtUtc: null
+        );
+
+        var result = await validator.ValidateAsync(command);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "Name must not exceed 100 characters");
+    }
+
+    [Fact]
+    public async Task CreateCouponValidator_Should_Fail_When_Description_Is_Empty()
+    {
+        var validator = new CreateCouponValidator();
+        var command = new CreateCouponCommand(
+            Name: "Coupon Name",
+            Description: "",
+            Type: CouponType.PercentageDiscount,
+            DiscountValue: 10m,
+            PointsCost: 50,
+            SpecificMenuItemId: null,
+            MinimumOrderAmount: null,
+            ExpiresAtUtc: null
+        );
+
+        var result = await validator.ValidateAsync(command);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "Description is required");
+    }
+
+    [Fact]
+    public async Task CreateCouponValidator_Should_Fail_When_Description_Exceeds_Maximum_Length()
+    {
+        var validator = new CreateCouponValidator();
+        var command = new CreateCouponCommand(
+            Name: "Coupon Name",
+            Description: new string('B', 501),
+            Type: CouponType.PercentageDiscount,
+            DiscountValue: 10m,
+            PointsCost: 50,
+            SpecificMenuItemId: null,
+            MinimumOrderAmount: null,
+            ExpiresAtUtc: null
+        );
+
+        var result = await validator.ValidateAsync(command);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "Description must not exceed 500 characters");
+    }
+
+    [Fact]
+    public async Task CreateCouponValidator_Should_Fail_When_DiscountValue_Is_Negative()
+    {
+        var validator = new CreateCouponValidator();
+        var command = new CreateCouponCommand(
+            Name: "Coupon",
+            Description: "Description",
+            Type: CouponType.PercentageDiscount,
+            DiscountValue: -5m,
+            PointsCost: 50,
+            SpecificMenuItemId: null,
+            MinimumOrderAmount: null,
+            ExpiresAtUtc: null
+        );
+
+        var result = await validator.ValidateAsync(command);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "Discount value must be greater than or equal to 0");
+    }
+
+    [Fact]
+    public async Task CreateCouponValidator_Should_Fail_When_DiscountValue_Is_Zero_For_NonFreeItem()
+    {
+        var validator = new CreateCouponValidator();
+        var command = new CreateCouponCommand(
+            Name: "Coupon",
+            Description: "Description",
+            Type: CouponType.FixedAmountDiscount,
+            DiscountValue: 0m,
+            PointsCost: 50,
+            SpecificMenuItemId: null,
+            MinimumOrderAmount: null,
+            ExpiresAtUtc: null
+        );
+
+        var result = await validator.ValidateAsync(command);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "Discount value must be greater than 0 for percentage and fixed discounts");
+    }
+
+    [Fact]
+    public async Task CreateCouponValidator_Should_Pass_When_DiscountValue_Is_Zero_For_FreeItem()
+    {
+        var validator = new CreateCouponValidator();
+        var command = new CreateCouponCommand(
+            Name: "Free Item Coupon",
+            Description: "Get a free item",
+            Type: CouponType.FreeItem,
+            DiscountValue: 0m,
+            PointsCost: 100,
+            SpecificMenuItemId: Guid.NewGuid(),
+            MinimumOrderAmount: null,
+            ExpiresAtUtc: null
+        );
+
+        var result = await validator.ValidateAsync(command);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public async Task CreateCouponValidator_Should_Fail_When_PointsCost_Is_Zero()
+    {
+        var validator = new CreateCouponValidator();
+        var command = new CreateCouponCommand(
+            Name: "Coupon",
+            Description: "Description",
+            Type: CouponType.PercentageDiscount,
+            DiscountValue: 10m,
+            PointsCost: 0,
+            SpecificMenuItemId: null,
+            MinimumOrderAmount: null,
+            ExpiresAtUtc: null
+        );
+
+        var result = await validator.ValidateAsync(command);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "Points cost must be greater than 0");
+    }
+
+    [Fact]
+    public async Task CreateCouponValidator_Should_Fail_When_MinimumOrderAmount_Is_Negative()
+    {
+        var validator = new CreateCouponValidator();
+        var command = new CreateCouponCommand(
+            Name: "Coupon",
+            Description: "Description",
+            Type: CouponType.PercentageDiscount,
+            DiscountValue: 10m,
+            PointsCost: 50,
+            SpecificMenuItemId: null,
+            MinimumOrderAmount: -10m,
+            ExpiresAtUtc: null
+        );
+
+        var result = await validator.ValidateAsync(command);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "Minimum order amount must be greater than or equal to 0");
+    }
+}

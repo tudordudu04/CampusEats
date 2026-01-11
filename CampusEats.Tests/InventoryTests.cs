@@ -1,6 +1,7 @@
 using Xunit;
 using CampusEats.Api.Features.Inventory.CreateIngredient;
 using CampusEats.Api.Features.Inventory.AdjustStock;
+using CampusEats.Api.Features.Inventory.GetAllIngredientsInStock;
 using CampusEats.Api.Domain;
 using Microsoft.EntityFrameworkCore;
 using FluentValidation;
@@ -355,6 +356,92 @@ public class InventoryTests
     
         var updated = await db.Ingredients.FindAsync(ingredient.Id);
         Assert.Equal(initialTime, updated.UpdatedAt); // Rămâne neschimbat conform logicii din handler
+    }
+
+    [Fact]
+    public async Task GetAllIngredientsInStock_Should_Return_Empty_List_When_No_Ingredients_Exist()
+    {
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        var handler = new GetAllIngredientsInStockHandler(db);
+        var command = new GetAllIngredientsInStockCommand();
+
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetAllIngredientsInStock_Should_Return_All_Ingredients_With_Correct_Data()
+    {
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        var ingredient1 = new Ingredient
+        {
+            Id = Guid.NewGuid(),
+            Name = "Tomatoes",
+            Unit = "kg",
+            CurrentStock = 15.5m,
+            LowStockThreshold = 5m,
+            UpdatedAt = new DateTime(2026, 1, 10)
+        };
+        var ingredient2 = new Ingredient
+        {
+            Id = Guid.NewGuid(),
+            Name = "Cheese",
+            Unit = "kg",
+            CurrentStock = 8.3m,
+            LowStockThreshold = 3m,
+            UpdatedAt = new DateTime(2026, 1, 11)
+        };
+        db.Ingredients.AddRange(ingredient1, ingredient2);
+        await db.SaveChangesAsync();
+
+        var handler = new GetAllIngredientsInStockHandler(db);
+        var command = new GetAllIngredientsInStockCommand();
+
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Count);
+        
+        var tomatoDto = result.FirstOrDefault(r => r.Name == "Tomatoes");
+        Assert.NotNull(tomatoDto);
+        Assert.Equal(ingredient1.Id, tomatoDto.Id);
+        Assert.Equal("kg", tomatoDto.Unit);
+        Assert.Equal(15.5m, tomatoDto.CurrentStock);
+        Assert.Equal(5m, tomatoDto.LowStockThreshold);
+        Assert.Equal(new DateTime(2026, 1, 10).ToShortDateString(), tomatoDto.UpdatedAt);
+
+        var cheeseDto = result.FirstOrDefault(r => r.Name == "Cheese");
+        Assert.NotNull(cheeseDto);
+        Assert.Equal(ingredient2.Id, cheeseDto.Id);
+        Assert.Equal(8.3m, cheeseDto.CurrentStock);
+    }
+
+    [Fact]
+    public async Task GetAllIngredientsInStock_Should_Return_Ingredients_With_Formatted_Date()
+    {
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        var updatedDate = new DateTime(2026, 1, 11, 14, 30, 0);
+        var ingredient = new Ingredient
+        {
+            Id = Guid.NewGuid(),
+            Name = "Flour",
+            Unit = "kg",
+            CurrentStock = 50m,
+            LowStockThreshold = 10m,
+            UpdatedAt = updatedDate
+        };
+        db.Ingredients.Add(ingredient);
+        await db.SaveChangesAsync();
+
+        var handler = new GetAllIngredientsInStockHandler(db);
+        var command = new GetAllIngredientsInStockCommand();
+
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        Assert.Single(result);
+        Assert.Equal(updatedDate.ToShortDateString(), result[0].UpdatedAt);
     }
 
     private IValidator<T> SetupValidator<T>() where T : class {

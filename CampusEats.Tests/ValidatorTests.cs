@@ -1,5 +1,6 @@
 ﻿using Xunit;
 using CampusEats.Api.Features.Auth.Register;
+using CampusEats.Api.Features.Inventory.GetStockByName;
 using CampusEats.Api.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -42,5 +43,41 @@ public class ValidatorTests
 
         var result = await validator.ValidateAsync(command);
         Assert.False(result.IsValid);
+    }
+
+    [Fact]
+    public async Task GetStockByNameValidator_Should_Pass_When_Name_Is_Valid()
+    {
+        var validator = new GetStockByNameValidator();
+        var command = new GetStockByNameCommand("Tomatoes");
+
+        var result = await validator.ValidateAsync(command);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public async Task GetStockByNameValidator_Should_Fail_When_Name_Is_Empty()
+    {
+        var validator = new GetStockByNameValidator();
+        var command = new GetStockByNameCommand("");
+
+        var result = await validator.ValidateAsync(command);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "Ingredient name is required.");
+    }
+
+    [Fact]
+    public async Task GetStockByNameValidator_Should_Fail_When_Name_Exceeds_Maximum_Length()
+    {
+        var validator = new GetStockByNameValidator();
+        var longName = new string('A', 101);
+        var command = new GetStockByNameCommand(longName);
+
+        var result = await validator.ValidateAsync(command);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "Ingredient name cannot exceed 100 characters.");
     }
 }

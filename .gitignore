@@ -43,3 +43,10 @@ TestResults/
 *.tmp
 *.log
 *.cache
+
+# SonarQube
+.sonar/
+.sonarqube/
+.scannerwork/
+sonar-report.json
+coverage-*.xml

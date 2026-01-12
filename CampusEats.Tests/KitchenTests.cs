@@ -1,5 +1,6 @@
 ﻿using CampusEats.Api.Enums;
 using CampusEats.Api.Features.Kitchen.UpdateKitchenTask;
+using CampusEats.Api.Features.Kitchen.DeleteByIdKitchenTask;
 using CampusEats.Api.Domain;
 using CampusEats.Api.Infrastructure.Loyalty;
 using NSubstitute;

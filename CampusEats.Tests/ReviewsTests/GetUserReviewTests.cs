@@ -97,8 +97,8 @@ public class GetUserReviewEndpointTests : IClassFixture<WebApplicationFactory<Pr
             builder.ConfigureServices(services =>
             {
                 // Replace DB
-                services.RemoveAll(typeof(DbContextOptions<AppDbContext>));
-                services.RemoveAll(typeof(IDbContextOptionsConfiguration<AppDbContext>));
+                services.RemoveAll<DbContextOptions<AppDbContext>>();
+                services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
                 services.AddDbContext<AppDbContext>(o => o.UseInMemoryDatabase("TestDb_GetUserReview"));
 
                 // Add Auth simulation

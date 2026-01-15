@@ -149,8 +149,8 @@ public class UpdateReviewEndpointTests : IClassFixture<WebApplicationFactory<Pro
         {
             builder.ConfigureServices(services =>
             {
-                services.RemoveAll(typeof(DbContextOptions<AppDbContext>));
-                services.RemoveAll(typeof(IDbContextOptionsConfiguration<AppDbContext>));
+                services.RemoveAll<DbContextOptions<AppDbContext>>();
+                services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
                 services.AddDbContext<AppDbContext>(o => o.UseInMemoryDatabase("TestDb_UpdateReviews"));
 
                 services.AddScoped(sp => new TestUserContext { UserId = Guid.NewGuid() });

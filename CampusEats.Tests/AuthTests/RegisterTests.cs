@@ -133,6 +133,117 @@ public class RegisterUserTests
         Assert.Single(db.Users);
         Assert.Equal(UserRole.WORKER, db.Users.First().Role);
     }
+
+    [Fact]
+    public async Task Handle_Should_Fail_When_HttpContext_Is_Null_For_NonStudent()
+    {
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        var passwords = new FakePasswordService();
+        var jwt = new FakeJwtService();
+        
+        // Null context
+        var http = new HttpContextAccessor { HttpContext = null }; 
+
+        var handler = new RegisterUserHandler(db, passwords, jwt, http);
+        var cmd = new RegisterUserCommand("Boss", "m@t.com", "Pass123!", UserRole.MANAGER);
+
+        var result = await handler.Handle(cmd, CancellationToken.None);
+
+        Assert.IsType<Microsoft.AspNetCore.Http.HttpResults.UnauthorizedHttpResult>(result);
+        Assert.Empty(db.Users);
+    }
+
+    [Fact]
+    public async Task Handle_Should_Fail_When_Role_Claim_Cannot_Be_Parsed()
+    {
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        var passwords = new FakePasswordService();
+        var jwt = new FakeJwtService();
+
+        // Authenticated with invalid role value
+        var context = new DefaultHttpContext();
+        var claims = new[] { new Claim(ClaimTypes.Role, "InvalidRole") };
+        context.User = new ClaimsPrincipal(new ClaimsIdentity(claims, "Test"));
+        var http = new HttpContextAccessor { HttpContext = context };
+
+        var handler = new RegisterUserHandler(db, passwords, jwt, http);
+        var cmd = new RegisterUserCommand("Boss", "m@t.com", "Pass123!", UserRole.MANAGER);
+
+        var result = await handler.Handle(cmd, CancellationToken.None);
+
+        Assert.IsType<Microsoft.AspNetCore.Http.HttpResults.ForbidHttpResult>(result);
+        Assert.Empty(db.Users);
+    }
+
+    [Fact]
+    public async Task Handle_Should_Add_Refresh_Token_Cookie_For_Student()
+    {
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        var passwords = new FakePasswordService();
+        var jwt = new FakeJwtService();
+        
+        var context = new DefaultHttpContext();
+        context.Response.Body = new MemoryStream(); // To avoid null reference
+        var http = new HttpContextAccessor { HttpContext = context };
+
+        var handler = new RegisterUserHandler(db, passwords, jwt, http);
+        var cmd = new RegisterUserCommand("Student", "s@t.com", "Pass123!", UserRole.STUDENT);
+
+        var result = await handler.Handle(cmd, CancellationToken.None);
+
+        Assert.IsType<Microsoft.AspNetCore.Http.HttpResults.Ok<AuthResultDto>>(result);
+        
+        // Verify cookie was set
+        var cookies = context.Response.Headers.SetCookie;
+        Assert.Contains(cookies, c => c!.Contains("refresh_token"));
+    }
+
+    [Fact]
+    public async Task Handle_Should_Create_LoyaltyAccount_For_All_Users()
+    {
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        var passwords = new FakePasswordService();
+        var jwt = new FakeJwtService();
+
+        // Test for MANAGER (non-student)
+        var context = new DefaultHttpContext();
+        var claims = new[] { new Claim(ClaimTypes.Role, "Manager") };
+        context.User = new ClaimsPrincipal(new ClaimsIdentity(claims, "Test"));
+        var http = new HttpContextAccessor { HttpContext = context };
+
+        var handler = new RegisterUserHandler(db, passwords, jwt, http);
+        var cmd = new RegisterUserCommand("Manager User", "mgr@t.com", "Pass123!", UserRole.MANAGER);
+
+        await handler.Handle(cmd, CancellationToken.None);
+
+        // Assert Loyalty Account created for Manager too
+        var user = await db.Users.FirstAsync();
+        var loyalty = await db.LoyaltyAccounts.FirstOrDefaultAsync(l => l.UserId == user.Id);
+        Assert.NotNull(loyalty);
+        Assert.Equal(0, loyalty!.Points);
+    }
+
+    [Fact]
+    public async Task Handle_Should_Not_Add_Refresh_Token_For_NonStudent()
+    {
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        var passwords = new FakePasswordService();
+        var jwt = new FakeJwtService();
+
+        var context = new DefaultHttpContext();
+        var claims = new[] { new Claim(ClaimTypes.Role, "Manager") };
+        context.User = new ClaimsPrincipal(new ClaimsIdentity(claims, "Test"));
+        var http = new HttpContextAccessor { HttpContext = context };
+
+        var handler = new RegisterUserHandler(db, passwords, jwt, http);
+        var cmd = new RegisterUserCommand("Worker", "w@t.com", "Pass123!", UserRole.WORKER);
+
+        await handler.Handle(cmd, CancellationToken.None);
+
+        // Assert no refresh token in DB for Worker
+        var rt = await db.RefreshTokens.FirstOrDefaultAsync();
+        Assert.Null(rt);
+    }
 }
 
 public class RegisterUserEndpointTests : IClassFixture<WebApplicationFactory<Program>>
@@ -171,8 +282,8 @@ public class RegisterUserEndpointTests : IClassFixture<WebApplicationFactory<Pro
         {
             builder.ConfigureServices(services =>
             {
-                services.RemoveAll(typeof(DbContextOptions<AppDbContext>));
-                services.RemoveAll(typeof(IDbContextOptionsConfiguration<AppDbContext>));
+                services.RemoveAll<DbContextOptions<AppDbContext>>();
+                services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
                 services.AddDbContext<AppDbContext>(o => o.UseInMemoryDatabase("TestDb_Register"));
                 
                 services.AddScoped(sp => new TestUserContext());

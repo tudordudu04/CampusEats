@@ -411,21 +411,298 @@ public class PaymentTest
     public async Task ConfirmPayment_Should_Support_Nested_Metadata_In_Object()
     {
         using var db = TestDbHelper.GetInMemoryDbContext();
-        var handler = new ConfirmPaymentHandler(db);
-    
+        
+        var userId = Guid.NewGuid();
+        var paymentId = Guid.NewGuid();
+        var menuItem = new MenuItem(
+            Id: Guid.NewGuid(),
+            Name: "Test Item",
+            Price: 10m,
+            Description: null,
+            Category: MenuCategory.BURGER,
+            ImageUrl: null,
+            Allergens: Array.Empty<string>()
+        );
+        
+        db.MenuItems.Add(menuItem);
+        
+        var payment = new Payment
+        {
+            Id = paymentId,
+            UserId = userId,
+            Amount = 10m,
+            Status = PaymentStatus.PENDING,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+        db.Payments.Add(payment);
+        await db.SaveChangesAsync();
+        
+        var orderItems = new List<OrderItemDto>
+        {
+            new OrderItemDto(menuItem.Id.ToString(), 1)
+        };
+        
         // Structura data.object.metadata suportată de handler
         var payload = JsonSerializer.Serialize(new { 
             data = new { 
                 @object = new { 
-                    metadata = new { payment_id = Guid.NewGuid().ToString(), user_id = Guid.NewGuid().ToString(), order_items = "[]" } 
+                    metadata = new { 
+                        payment_id = paymentId.ToString(), 
+                        user_id = userId.ToString(), 
+                        order_items = JsonSerializer.Serialize(orderItems)
+                    } 
                 } 
             } 
         });
     
+        var handler = new ConfirmPaymentHandler(db);
         var command = new ConfirmPaymentCommand("checkout.session.completed", payload);
     
         // Nu ar trebui să arunce excepția de "Missing metadata"
         await handler.Handle(command, CancellationToken.None);
+        
+        // Verify order was created
+        var order = await db.Orders.FirstOrDefaultAsync(o => o.UserId == userId);
+        Assert.NotNull(order);
+    }
+
+    [Fact]
+    public async Task ConfirmPayment_Should_Throw_When_Required_Metadata_Keys_Are_Missing()
+    {
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        var handler = new ConfirmPaymentHandler(db);
+    
+        // Payload cu metadata dar fără payment_id
+        var payload = JsonSerializer.Serialize(new { 
+            metadata = new { 
+                user_id = Guid.NewGuid().ToString(), 
+                order_items = "[]" 
+            } 
+        });
+        var command = new ConfirmPaymentCommand("checkout.session.completed", payload);
+    
+        await Assert.ThrowsAsync<InvalidDataException>(() => handler.Handle(command, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task ConfirmPayment_Should_Throw_When_Metadata_Values_Are_Empty()
+    {
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        var handler = new ConfirmPaymentHandler(db);
+    
+        // Payload cu metadata dar cu valori goale
+        var payload = JsonSerializer.Serialize(new { 
+            metadata = new { 
+                payment_id = "",
+                user_id = Guid.NewGuid().ToString(), 
+                order_items = "[]" 
+            } 
+        });
+        var command = new ConfirmPaymentCommand("checkout.session.completed", payload);
+    
+        await Assert.ThrowsAsync<InvalidDataException>(() => handler.Handle(command, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task ConfirmPayment_Should_Handle_Payment_Not_Found()
+    {
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        
+        var userId = Guid.NewGuid();
+        var nonExistentPaymentId = Guid.NewGuid();
+        var menuItem = new MenuItem(
+            Id: Guid.NewGuid(),
+            Name: "Test Item",
+            Price: 10m,
+            Description: null,
+            Category: MenuCategory.BURGER,
+            ImageUrl: null,
+            Allergens: Array.Empty<string>()
+        );
+        
+        db.MenuItems.Add(menuItem);
+        await db.SaveChangesAsync();
+        
+        var orderItems = new List<OrderItemDto>
+        {
+            new OrderItemDto(menuItem.Id.ToString(), 1)
+        };
+        
+        var metadata = new
+        {
+            payment_id = nonExistentPaymentId.ToString(),
+            user_id = userId.ToString(),
+            order_items = JsonSerializer.Serialize(orderItems)
+        };
+        
+        var payloadJson = JsonSerializer.Serialize(new { metadata = metadata });
+        
+        var handler = new ConfirmPaymentHandler(db);
+        var command = new ConfirmPaymentCommand("checkout.session.completed", payloadJson);
+        
+        // Act - should not throw, just return early
+        await handler.Handle(command, CancellationToken.None);
+        
+        // Assert - no order should be created
+        var orders = await db.Orders.ToListAsync();
+        Assert.Empty(orders);
+    }
+
+    [Fact]
+    public async Task ConfirmPayment_With_FreeItem_Coupon_Should_Handle_Item_Not_In_Order()
+    {
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        
+        var userId = Guid.NewGuid();
+        var paymentId = Guid.NewGuid();
+        var freeItem = new MenuItem(
+            Id: Guid.NewGuid(),
+            Name: "Free Drink",
+            Price: 5m,
+            Description: null,
+            Category: MenuCategory.DRINK,
+            ImageUrl: null,
+            Allergens: Array.Empty<string>()
+        );
+        var paidItem = new MenuItem(
+            Id: Guid.NewGuid(),
+            Name: "Burger",
+            Price: 30m,
+            Description: null,
+            Category: MenuCategory.BURGER,
+            ImageUrl: null,
+            Allergens: Array.Empty<string>()
+        );
+        
+        db.MenuItems.AddRange(freeItem, paidItem);
+        
+        var coupon = new Coupon
+        {
+            Id = Guid.NewGuid(),
+            Name = "FREEDRINK",
+            Description = "Free drink coupon",
+            Type = CouponType.FreeItem,
+            DiscountValue = 0,
+            SpecificMenuItemId = freeItem.Id,
+            IsActive = true
+        };
+        db.Coupons.Add(coupon);
+        
+        var userCoupon = new UserCoupon
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            CouponId = coupon.Id,
+            IsUsed = false,
+            AcquiredAtUtc = DateTime.UtcNow
+        };
+        db.UserCoupons.Add(userCoupon);
+        
+        var payment = new Payment
+        {
+            Id = paymentId,
+            UserId = userId,
+            Amount = 30m,
+            Status = PaymentStatus.PENDING,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+        db.Payments.Add(payment);
+        await db.SaveChangesAsync();
+        
+        // Order only has paidItem, not freeItem
+        var orderItems = new List<OrderItemDto>
+        {
+            new OrderItemDto(paidItem.Id.ToString(), 1)
+        };
+        
+        var metadata = new
+        {
+            payment_id = paymentId.ToString(),
+            user_id = userId.ToString(),
+            order_items = JsonSerializer.Serialize(orderItems),
+            user_coupon_id = userCoupon.Id.ToString()
+        };
+        
+        var payloadJson = JsonSerializer.Serialize(new { metadata = metadata });
+        
+        var handler = new ConfirmPaymentHandler(db);
+        var command = new ConfirmPaymentCommand("checkout.session.completed", payloadJson);
+        
+        // Act
+        await handler.Handle(command, CancellationToken.None);
+        
+        // Assert - no discount applied because free item not in order
+        var order = await db.Orders.FirstOrDefaultAsync(o => o.UserId == userId);
+        Assert.NotNull(order);
+        Assert.Equal(30m, order.Subtotal);
+        Assert.Equal(0m, order.DiscountAmount);
+        Assert.Equal(30m, order.Total);
+    }
+
+    [Fact]
+    public async Task ConfirmPayment_Should_Create_Order_With_SaveChangesAsync()
+    {
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        
+        var userId = Guid.NewGuid();
+        var paymentId = Guid.NewGuid();
+        var menuItem = new MenuItem(
+            Id: Guid.NewGuid(),
+            Name: "Test Burger",
+            Price: 25m,
+            Description: null,
+            Category: MenuCategory.BURGER,
+            ImageUrl: null,
+            Allergens: Array.Empty<string>()
+        );
+        
+        db.MenuItems.Add(menuItem);
+        
+        var payment = new Payment
+        {
+            Id = paymentId,
+            UserId = userId,
+            Amount = 25m,
+            Status = PaymentStatus.PENDING,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+        db.Payments.Add(payment);
+        await db.SaveChangesAsync();
+        
+        var orderItems = new List<OrderItemDto>
+        {
+            new OrderItemDto(menuItem.Id.ToString(), 1)
+        };
+        
+        var metadata = new
+        {
+            payment_id = paymentId.ToString(),
+            user_id = userId.ToString(),
+            order_items = JsonSerializer.Serialize(orderItems)
+        };
+        
+        var payloadJson = JsonSerializer.Serialize(new { metadata = metadata });
+        
+        var handler = new ConfirmPaymentHandler(db);
+        var command = new ConfirmPaymentCommand("checkout.session.completed", payloadJson);
+        
+        // Act
+        await handler.Handle(command, CancellationToken.None);
+        
+        // Assert - verify all entities saved
+        var order = await db.Orders.Include(o => o.Items).FirstOrDefaultAsync(o => o.UserId == userId);
+        Assert.NotNull(order);
+        Assert.Single(order.Items);
+        
+        var updatedPayment = await db.Payments.FindAsync(paymentId);
+        Assert.NotNull(updatedPayment);
+        Assert.Equal(PaymentStatus.SUCCEDED, updatedPayment.Status);
+        Assert.NotNull(updatedPayment.CompletedAtUtc);
+        Assert.Equal(order.Id, updatedPayment.OrderId);
+        
+        var kitchenTask = await db.KitchenTasks.FirstOrDefaultAsync(kt => kt.OrderId == order.Id);
+        Assert.NotNull(kitchenTask);
+        Assert.Equal(userId, kitchenTask.AssignedTo);
     }
 }
 

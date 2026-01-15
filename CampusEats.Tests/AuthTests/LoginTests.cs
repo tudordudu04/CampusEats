@@ -145,14 +145,14 @@ public class LoginUserEndpointTests : IClassFixture<WebApplicationFactory<Progra
         {
             builder.ConfigureServices(services =>
             {
-                services.RemoveAll(typeof(DbContextOptions<AppDbContext>));
-                services.RemoveAll(typeof(IDbContextOptionsConfiguration<AppDbContext>));
+                services.RemoveAll<DbContextOptions<AppDbContext>>();
+                services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
                 services.AddDbContext<AppDbContext>(o => o.UseInMemoryDatabase("TestDb_Login"));
             });
         });
     }
 
-    private AppDbContext CreateDbContext(IServiceScope scope)
+    private static AppDbContext CreateDbContext(IServiceScope scope)
     {
         return scope.ServiceProvider.GetRequiredService<AppDbContext>();
     }

@@ -95,6 +95,127 @@ public class UploadMenuImageTests
             handler.Handle(cmd, CancellationToken.None));
     }
 
+    [Fact]
+    public async Task Handle_Should_Use_Default_Extension_When_Missing()
+    {
+        var tempRoot = Path.Combine(Path.GetTempPath(), "campuseats-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempRoot);
+
+        var env = new TestWebHostEnvironment
+        {
+            WebRootPath = tempRoot,
+            WebRootFileProvider = new PhysicalFileProvider(tempRoot)
+        };
+
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Scheme = "https";
+        httpContext.Request.Host = new HostString("localhost");
+
+        var httpContextAccessor = new HttpContextAccessor
+        {
+            HttpContext = httpContext
+        };
+        
+        await using var ms = new MemoryStream(Encoding.UTF8.GetBytes("fake-image-content"));
+        
+        // Filename without extension
+        var cmd = new UploadMenuImageCommand(
+            "noextension",
+            "image/jpeg",
+            ms.Length,
+            ms
+        );
+
+        var handler = new UploadMenuImageHandler(env, httpContextAccessor);
+
+        var result = await handler.Handle(cmd, CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Contains(".jpg", result.Url);
+    }
+
+    [Fact]
+    public async Task Handle_Should_Create_Directory_If_Not_Exists()
+    {
+        var tempRoot = Path.Combine(Path.GetTempPath(), "campuseats-tests", Guid.NewGuid().ToString("N"));
+        // Create temp root but not the menu-images subdirectory
+        Directory.CreateDirectory(tempRoot);
+
+        var env = new TestWebHostEnvironment
+        {
+            WebRootPath = tempRoot,
+            WebRootFileProvider = new PhysicalFileProvider(tempRoot)
+        };
+
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Scheme = "http";
+        httpContext.Request.Host = new HostString("example.com");
+
+        var httpContextAccessor = new HttpContextAccessor
+        {
+            HttpContext = httpContext
+        };
+        
+        await using var ms = new MemoryStream(Encoding.UTF8.GetBytes("image-data"));
+        var cmd = new UploadMenuImageCommand(
+            "image.png",
+            "image/png",
+            ms.Length,
+            ms
+        );
+
+        var handler = new UploadMenuImageHandler(env, httpContextAccessor);
+
+        var result = await handler.Handle(cmd, CancellationToken.None);
+
+        Assert.NotNull(result);
+        var uploadsDir = Path.Combine(tempRoot, "menu-images");
+        Assert.True(Directory.Exists(uploadsDir));
+    }
+
+    [Fact]
+    public async Task Handle_Should_Copy_Stream_Content_To_File()
+    {
+        var tempRoot = Path.Combine(Path.GetTempPath(), "campuseats-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempRoot);
+
+        var env = new TestWebHostEnvironment
+        {
+            WebRootPath = tempRoot,
+            WebRootFileProvider = new PhysicalFileProvider(tempRoot)
+        };
+
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Scheme = "https";
+        httpContext.Request.Host = new HostString("test.local");
+
+        var httpContextAccessor = new HttpContextAccessor
+        {
+            HttpContext = httpContext
+        };
+        
+        var testContent = "This is test image content with some data";
+        await using var ms = new MemoryStream(Encoding.UTF8.GetBytes(testContent));
+        
+        var cmd = new UploadMenuImageCommand(
+            "test.jpg",
+            "image/jpeg",
+            ms.Length,
+            ms
+        );
+
+        var handler = new UploadMenuImageHandler(env, httpContextAccessor);
+
+        var result = await handler.Handle(cmd, CancellationToken.None);
+
+        // Verify file content matches
+        var uri = new Uri(result.Url);
+        var savedPath = Path.Combine(tempRoot, uri.AbsolutePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+        var savedContent = await File.ReadAllTextAsync(savedPath);
+        
+        Assert.Equal(testContent, savedContent);
+    }
+
     private sealed class TestWebHostEnvironment : IWebHostEnvironment
     {
         public string ApplicationName { get; set; } = "Tests";
@@ -117,8 +238,8 @@ public class UploadMenuImageEndpointTests : IClassFixture<WebApplicationFactory<
         {
             builder.ConfigureServices(services =>
             {
-                services.RemoveAll(typeof(DbContextOptions<AppDbContext>));
-                services.RemoveAll(typeof(IDbContextOptionsConfiguration<AppDbContext>));
+                services.RemoveAll<DbContextOptions<AppDbContext>>();
+                services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
                 services.AddDbContext<AppDbContext>(o => o.UseInMemoryDatabase("TestDb"));
             });
         });

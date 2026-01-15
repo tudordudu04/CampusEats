@@ -71,6 +71,7 @@ public class UploadProfilePictureTests : IDisposable
     public void Dispose()
     {
         _env.Cleanup();
+        GC.SuppressFinalize(this);
     }
 
     [Fact]
@@ -117,8 +118,56 @@ public class UploadProfilePictureTests : IDisposable
 
         var handler = new UploadProfilePictureHandler(_env, http);
 
-        using var stream = new MemoryStream();
+        using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("content"));
         var command = new UploadProfilePictureCommand(stream, "blob"); 
+
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        Assert.EndsWith(".jpg", result.ProfilePictureUrl);
+        
+        // Verify file was actually created with .jpg extension
+        var fileName = Path.GetFileName(result.ProfilePictureUrl);
+        Assert.Contains(".jpg", fileName);
+        var filePath = Path.Combine(_env.WebRootPath, "profile-images", fileName);
+        Assert.True(File.Exists(filePath));
+    }
+
+    [Fact]
+    public async Task Handle_Should_Use_Original_Extension_When_Present()
+    {
+        var context = new DefaultHttpContext();
+        context.Request.Scheme = "https";
+        context.Request.Host = new HostString("test.local");
+        var http = new HttpContextAccessor { HttpContext = context };
+
+        var handler = new UploadProfilePictureHandler(_env, http);
+
+        using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("image data"));
+        var command = new UploadProfilePictureCommand(stream, "profile.png");
+
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        Assert.EndsWith(".png", result.ProfilePictureUrl);
+        
+        var fileName = Path.GetFileName(result.ProfilePictureUrl);
+        var filePath = Path.Combine(_env.WebRootPath, "profile-images", fileName);
+        Assert.True(File.Exists(filePath));
+    }
+
+    [Fact]
+    public async Task Handle_Should_Default_To_Jpg_For_Filename_Without_Extension()
+    {
+        var context = new DefaultHttpContext();
+        context.Request.Scheme = "http";
+        context.Request.Host = new HostString("example.com");
+        var http = new HttpContextAccessor { HttpContext = context };
+
+        var handler = new UploadProfilePictureHandler(_env, http);
+
+        using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("test"));
+        
+        // Filename without any extension
+        var command = new UploadProfilePictureCommand(stream, "filenoext");
 
         var result = await handler.Handle(command, CancellationToken.None);
 
@@ -140,13 +189,13 @@ public class UploadProfilePictureEndpointTests : IClassFixture<WebApplicationFac
             builder.ConfigureServices(services =>
             {
                 // Clean removal of existing DB Context options
-                services.RemoveAll(typeof(DbContextOptions<AppDbContext>));
-                services.RemoveAll(typeof(IDbContextOptionsConfiguration<AppDbContext>));
+                services.RemoveAll<DbContextOptions<AppDbContext>>();
+                services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
 
                 services.AddDbContext<AppDbContext>(o => o.UseInMemoryDatabase("TestDb_UploadPic"));
 
                 // Override IWebHostEnvironment
-                services.RemoveAll(typeof(IWebHostEnvironment));
+                services.RemoveAll<IWebHostEnvironment>();
                 services.AddSingleton<IWebHostEnvironment>(_testEnv);
             });
         });
@@ -157,7 +206,7 @@ public class UploadProfilePictureEndpointTests : IClassFixture<WebApplicationFac
         _testEnv.Cleanup();
     }
 
-    private AppDbContext CreateDbContext(IServiceScope scope)
+    private static AppDbContext CreateDbContext(IServiceScope scope)
         => scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
     [Fact]

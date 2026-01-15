@@ -19,6 +19,8 @@ using NSubstitute;
 using System.Security.Claims;
 using CampusEats.Tests;
 
+namespace CampusEats.Tests.AuthTests;
+
 public class AuthTest
 {
     [Fact]

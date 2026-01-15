@@ -36,6 +36,104 @@ public class UpdateMenuItemTests
     }
 
     [Fact]
+    public async Task Handle_Should_Trim_Name_And_Description()
+    {
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        var id = Guid.NewGuid();
+        db.MenuItems.Add(new MenuItem(id, "Original", 10, "Desc", MenuCategory.PIZZA, null, []));
+        await db.SaveChangesAsync();
+
+        var handler = new UpdateMenuItemHandler(db);
+        var cmd = new UpdateMenuItemCommand(id, "  Trimmed Name  ", 20, "  Trimmed Desc  ", MenuCategory.BURGER, "  image.jpg  ", ["peanuts"]);
+
+        var result = await handler.Handle(cmd, CancellationToken.None);
+
+        Assert.True(result);
+        var entity = await db.MenuItems.FirstAsync(m => m.Id == id);
+        Assert.Equal("Trimmed Name", entity.Name);
+        Assert.Equal("Trimmed Desc", entity.Description);
+        Assert.Equal("image.jpg", entity.ImageUrl);
+        Assert.Single(entity.Allergens);
+    }
+
+    [Fact]
+    public async Task Handle_Should_Handle_Null_Optional_Fields()
+    {
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        var id = Guid.NewGuid();
+        db.MenuItems.Add(new MenuItem(id, "Original", 10, "Desc", MenuCategory.PIZZA, "old.jpg", ["old"]));
+        await db.SaveChangesAsync();
+
+        var handler = new UpdateMenuItemHandler(db);
+        var cmd = new UpdateMenuItemCommand(id, "Updated", 15, null, MenuCategory.DRINK, null, null);
+
+        var result = await handler.Handle(cmd, CancellationToken.None);
+
+        Assert.True(result);
+        var entity = await db.MenuItems.FirstAsync(m => m.Id == id);
+        Assert.Equal("Updated", entity.Name);
+        Assert.Null(entity.Description);
+        Assert.Null(entity.ImageUrl);
+        Assert.Empty(entity.Allergens);
+    }
+
+    [Fact]
+    public async Task Handle_Should_Update_All_Properties_Including_ImageUrl()
+    {
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        var id = Guid.NewGuid();
+        db.MenuItems.Add(new MenuItem(id, "Old", 10, "OldDesc", MenuCategory.PIZZA, "old.jpg", ["old"]));
+        await db.SaveChangesAsync();
+
+        var handler = new UpdateMenuItemHandler(db);
+        var cmd = new UpdateMenuItemCommand(
+            id, 
+            "NewName", 
+            25.99m, 
+            "NewDescription", 
+            MenuCategory.BURGER, 
+            "https://example.com/new.jpg", 
+            new[] { "gluten", "dairy" }
+        );
+
+        var result = await handler.Handle(cmd, CancellationToken.None);
+
+        Assert.True(result);
+        var entity = await db.MenuItems.FirstAsync(m => m.Id == id);
+        Assert.Equal("NewName", entity.Name);
+        Assert.Equal(25.99m, entity.Price);
+        Assert.Equal("NewDescription", entity.Description);
+        Assert.Equal(MenuCategory.BURGER, entity.Category);
+        Assert.Equal("https://example.com/new.jpg", entity.ImageUrl);
+        Assert.Equal(2, entity.Allergens.Length);
+        Assert.Contains("gluten", entity.Allergens);
+        Assert.Contains("dairy", entity.Allergens);
+    }
+
+    [Fact]
+    public async Task Handle_Should_SaveChanges_And_Persist_Updates()
+    {
+        using var db = TestDbHelper.GetInMemoryDbContext();
+        var id = Guid.NewGuid();
+        db.MenuItems.Add(new MenuItem(id, "Original", 10, null, MenuCategory.PIZZA, null, []));
+        await db.SaveChangesAsync();
+
+        var handler = new UpdateMenuItemHandler(db);
+        var cmd = new UpdateMenuItemCommand(id, "Updated", 20, "New Description", MenuCategory.SALAD, null, []);
+
+        var result = await handler.Handle(cmd, CancellationToken.None);
+
+        Assert.True(result);
+        
+        // Verify changes are persisted by detaching and re-querying
+        db.Entry(await db.MenuItems.FindAsync(id)).State = EntityState.Detached;
+        var requeried = await db.MenuItems.AsNoTracking().FirstAsync(m => m.Id == id);
+        Assert.Equal("Updated", requeried.Name);
+        Assert.Equal(20, requeried.Price);
+        Assert.Equal(MenuCategory.SALAD, requeried.Category);
+    }
+
+    [Fact]
     public async Task Handle_Should_Return_False_When_Item_Not_Found()
     {
         using var db = TestDbHelper.GetInMemoryDbContext();
@@ -59,8 +157,8 @@ public class UpdateMenuItemEndpointTests : IClassFixture<WebApplicationFactory<P
         {
             builder.ConfigureServices(services =>
             {
-                services.RemoveAll(typeof(DbContextOptions<AppDbContext>));
-                services.RemoveAll(typeof(IDbContextOptionsConfiguration<AppDbContext>));
+                services.RemoveAll<DbContextOptions<AppDbContext>>();
+                services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
                 services.AddDbContext<AppDbContext>(o => o.UseInMemoryDatabase("TestDb"));
             });
         });

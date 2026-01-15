@@ -18,7 +18,7 @@ namespace CampusEats.Tests.AuthTests;
 
 public class DeleteUserTests
 {
-    private ClaimsPrincipal CreatePrincipal(string role, bool isAuthenticated = true)
+    private static ClaimsPrincipal CreatePrincipal(string role, bool isAuthenticated = true)
     {
         if (!isAuthenticated) return new ClaimsPrincipal(new ClaimsIdentity());
 
@@ -136,14 +136,14 @@ public class DeleteUserEndpointTests : IClassFixture<WebApplicationFactory<Progr
         {
             builder.ConfigureServices(services =>
             {
-                services.RemoveAll(typeof(DbContextOptions<AppDbContext>));
-                services.RemoveAll(typeof(IDbContextOptionsConfiguration<AppDbContext>));
+                services.RemoveAll<DbContextOptions<AppDbContext>>();
+                services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
                 services.AddDbContext<AppDbContext>(o => o.UseInMemoryDatabase("TestDb_DeleteUser"));
             });
         });
     }
 
-    private AppDbContext CreateDbContext(IServiceScope scope)
+    private static AppDbContext CreateDbContext(IServiceScope scope)
         => scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
     [Fact]

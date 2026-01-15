@@ -76,8 +76,8 @@ public class GetUserEndpointTests : IClassFixture<WebApplicationFactory<Program>
         {
             builder.ConfigureServices(services =>
             {
-                services.RemoveAll(typeof(DbContextOptions<AppDbContext>));
-                services.RemoveAll(typeof(IDbContextOptionsConfiguration<AppDbContext>));
+                services.RemoveAll<DbContextOptions<AppDbContext>>();
+                services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
                 services.AddDbContext<AppDbContext>(o => o.UseInMemoryDatabase("TestDb_GetUser"));
                 
                 // Important: Do NOT mock IJwtTokenService here if we want the server to validate tokens correctly.
@@ -87,7 +87,7 @@ public class GetUserEndpointTests : IClassFixture<WebApplicationFactory<Program>
         });
     }
 
-    private AppDbContext CreateDbContext(IServiceScope scope)
+    private static AppDbContext CreateDbContext(IServiceScope scope)
         => scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
     [Fact]
